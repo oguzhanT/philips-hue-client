@@ -1,0 +1,46 @@
+FROM php:8.2-fpm-alpine
+
+# Install development dependencies
+RUN apk add --no-cache \
+    git \
+    curl \
+    libpng-dev \
+    oniguruma-dev \
+    libxml2-dev \
+    zip \
+    unzip \
+    avahi-tools \
+    avahi-dev \
+    $PHPIZE_DEPS
+
+# Install PHP extensions including Xdebug for development
+RUN docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd sockets \
+    && pecl install xdebug redis \
+    && docker-php-ext-enable xdebug redis
+
+# Xdebug configuration
+RUN echo "xdebug.mode=develop,debug" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_host=host.docker.internal" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.client_port=9003" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini \
+    && echo "xdebug.start_with_request=yes" >> /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini
+
+# Get latest Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Set working directory
+WORKDIR /workspace
+
+# Copy composer files
+COPY composer.json composer.lock ./
+
+# Install dependencies including dev dependencies
+RUN composer install --optimize-autoloader
+
+# Create cache directory
+RUN mkdir -p /tmp/hue_cache && chown www-data:www-data /tmp/hue_cache
+
+# Expose port
+EXPOSE 8080 9000
+
+# Use development server
+CMD ["php", "-S", "0.0.0.0:8080", "-t", "public", "public/api.php"]

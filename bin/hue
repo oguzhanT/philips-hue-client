@@ -1,0 +1,32 @@
+#!/usr/bin/env php
+<?php
+
+// Autoloader'ı bul
+$autoloadFiles = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+    __DIR__ . '/../../../../autoload.php',
+];
+
+$autoloadFile = null;
+foreach ($autoloadFiles as $file) {
+    if (file_exists($file)) {
+        $autoloadFile = $file;
+        break;
+    }
+}
+
+if (!$autoloadFile) {
+    echo "Autoload file not found.\n";
+    exit(1);
+}
+
+require_once $autoloadFile;
+
+use OguzhanTogay\HueClient\Console\HueCommand;
+use Symfony\Component\Console\Application;
+
+$application = new Application('Philips Hue CLI', '1.0.0');
+$application->add(new HueCommand());
+$application->setDefaultCommand('hue:command', true);
+$application->run();

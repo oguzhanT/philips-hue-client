@@ -1,0 +1,98 @@
+services:
+  _defaults:
+    autowire: true
+    autoconfigure: true
+    public: false
+
+  # Hue Client Service
+  OguzhanTogay\HueClient\HueClient:
+    arguments:
+      $bridgeIp: '%env(HUE_BRIDGE_IP)%'
+      $username: '%env(HUE_USERNAME)%'
+      $config:
+        timeout: '%env(int:HUE_TIMEOUT)%'
+        verify: '%env(bool:HUE_VERIFY_SSL)%'
+        retry_attempts: '%env(int:HUE_RETRY_ATTEMPTS)%'
+        cache_enabled: '%env(bool:HUE_CACHE_ENABLED)%'
+        cache_type: '%env(HUE_CACHE_TYPE)%'
+      $logger: '@logger'
+    public: true
+    tags:
+      - { name: 'monolog.logger', channel: 'hue' }
+
+  # Connection Pool Service
+  OguzhanTogay\HueClient\ConnectionPool:
+    arguments:
+      $maxConnections: '%env(int:HUE_MAX_CONNECTIONS)%'
+      $timeout: '%env(int:HUE_TIMEOUT)%'
+      $logger: '@logger'
+    public: true
+
+  # Bridge Discovery Service
+  OguzhanTogay\HueClient\Discovery\BridgeDiscovery:
+    public: true
+
+  # Cache Service
+  OguzhanTogay\HueClient\Cache\HueCache:
+    arguments:
+      $cacheType: '%env(HUE_CACHE_TYPE)%'
+      $config: 
+        cache_dir: '%kernel.cache_dir%/hue'
+        default_ttl: '%env(int:HUE_CACHE_TTL)%'
+      $logger: '@logger'
+    public: true
+
+  # Retry Handler
+  OguzhanTogay\HueClient\Retry\RetryHandler:
+    arguments:
+      $maxRetries: '%env(int:HUE_RETRY_ATTEMPTS)%'
+      $retryDelays: [1, 2, 4]
+      $logger: '@logger'
+    public: true
+
+  # REST API Controllers
+  OguzhanTogay\HueClient\Api\Controllers\LightsController:
+    arguments:
+      $hueClient: '@OguzhanTogay\HueClient\HueClient'
+    tags: ['controller.service_arguments']
+
+  OguzhanTogay\HueClient\Api\Controllers\GroupsController:
+    arguments:
+      $hueClient: '@OguzhanTogay\HueClient\HueClient'
+    tags: ['controller.service_arguments']
+
+  OguzhanTogay\HueClient\Api\Controllers\ScenesController:
+    arguments:
+      $hueClient: '@OguzhanTogay\HueClient\HueClient'
+    tags: ['controller.service_arguments']
+
+  OguzhanTogay\HueClient\Api\Controllers\SchedulesController:
+    arguments:
+      $hueClient: '@OguzhanTogay\HueClient\HueClient'
+    tags: ['controller.service_arguments']
+
+  OguzhanTogay\HueClient\Api\Controllers\SensorsController:
+    arguments:
+      $hueClient: '@OguzhanTogay\HueClient\HueClient'
+    tags: ['controller.service_arguments']
+
+  OguzhanTogay\HueClient\Api\Controllers\BridgeController:
+    arguments:
+      $hueClient: '@OguzhanTogay\HueClient\HueClient'
+    tags: ['controller.service_arguments']
+
+  # Console Commands
+  OguzhanTogay\HueClient\Symfony\Command\HueDiscoverCommand:
+    arguments:
+      $discovery: '@OguzhanTogay\HueClient\Discovery\BridgeDiscovery'
+    tags: ['console.command']
+
+  OguzhanTogay\HueClient\Symfony\Command\HueSetupCommand:
+    arguments:
+      $discovery: '@OguzhanTogay\HueClient\Discovery\BridgeDiscovery'
+    tags: ['console.command']
+
+  OguzhanTogay\HueClient\Symfony\Command\HueServerCommand:
+    arguments:
+      $hueClient: '@OguzhanTogay\HueClient\HueClient'
+    tags: ['console.command']

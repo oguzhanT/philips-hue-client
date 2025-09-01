@@ -1,0 +1,41 @@
+{
+  "name": "Philips Hue Client Development",
+  "dockerComposeFile": "../docker-compose.dev.yml",
+  "service": "dev",
+  "workspaceFolder": "/workspace",
+  "shutdownAction": "stopCompose",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "bmewburn.vscode-intelephense-client",
+        "ms-vscode.vscode-json",
+        "bradlc.vscode-tailwindcss",
+        "esbenp.prettier-vscode",
+        "ms-vscode.vscode-typescript-next",
+        "humao.rest-client",
+        "ms-vscode.thunder-client",
+        "rangav.vscode-thunder-client"
+      ],
+      "settings": {
+        "php.suggest.basic": false,
+        "php.validate.enable": true,
+        "php.validate.executablePath": "/usr/local/bin/php",
+        "intelephense.files.maxSize": 5000000,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "bmewburn.vscode-intelephense-client"
+      }
+    }
+  },
+  "forwardPorts": [8080, 6379],
+  "portsAttributes": {
+    "8080": {
+      "label": "Hue API Server",
+      "onAutoForward": "openBrowser"
+    },
+    "6379": {
+      "label": "Redis Cache"
+    }
+  },
+  "postCreateCommand": "composer install && echo 'Development environment ready!'",
+  "remoteUser": "www-data"
+}

@@ -1,0 +1,121 @@
+#!/usr/bin/env php
+<?php
+
+$autoloadFiles = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+    __DIR__ . '/../../../../autoload.php',
+];
+
+$autoloadFile = null;
+foreach ($autoloadFiles as $file) {
+    if (file_exists($file)) {
+        $autoloadFile = $file;
+        break;
+    }
+}
+
+if (!$autoloadFile) {
+    echo "Autoload file not found.\n";
+    exit(1);
+}
+
+require_once $autoloadFile;
+
+use OguzhanTogay\HueClient\HueClient;
+use OguzhanTogay\HueClient\Api\RestApi;
+use OguzhanTogay\HueClient\Discovery\BridgeDiscovery;
+
+// Parse command line arguments
+$options = getopt('h:u:p:d', ['help', 'host:', 'username:', 'port:', 'discover']);
+
+if (isset($options['help'])) {
+    echo "Philips Hue REST API Server\n\n";
+    echo "Usage: hue-server [OPTIONS]\n\n";
+    echo "Options:\n";
+    echo "  -h, --host       Bridge IP address\n";
+    echo "  -u, --username   Hue username\n";
+    echo "  -p, --port       Server port (default: 8080)\n";
+    echo "  -d, --discover   Auto-discover bridge\n";
+    echo "  --help           Show this help message\n\n";
+    echo "Environment Variables:\n";
+    echo "  HUE_BRIDGE_IP    Bridge IP address\n";
+    echo "  HUE_USERNAME     Hue username\n";
+    echo "  HUE_PORT         Server port\n\n";
+    echo "Examples:\n";
+    echo "  hue-server -h 192.168.1.100 -u your-username\n";
+    echo "  hue-server --discover\n";
+    echo "  HUE_BRIDGE_IP=192.168.1.100 HUE_USERNAME=username hue-server\n";
+    exit(0);
+}
+
+// Configuration
+$bridgeIp = $options['h'] ?? $options['host'] ?? $_ENV['HUE_BRIDGE_IP'] ?? null;
+$username = $options['u'] ?? $options['username'] ?? $_ENV['HUE_USERNAME'] ?? null;
+$port = $options['p'] ?? $options['port'] ?? $_ENV['HUE_PORT'] ?? 8080;
+$autoDiscover = isset($options['d']) || isset($options['discover']);
+
+// Auto-discover bridge if requested or no IP provided
+if ($autoDiscover || !$bridgeIp) {
+    echo "🔍 Auto-discovering Hue Bridge...\n";
+    $discovery = new BridgeDiscovery();
+    $bridges = $discovery->discover();
+    
+    if (!empty($bridges)) {
+        $bridgeIp = $bridges[0]->getIp();
+        echo "✅ Found bridge at: {$bridgeIp}\n";
+    } else {
+        echo "❌ No Hue bridges found on network\n";
+        echo "💡 Make sure your bridge is connected and try again\n";
+        exit(1);
+    }
+}
+
+if (!$bridgeIp) {
+    echo "❌ Bridge IP not provided\n";
+    echo "💡 Use -h <ip> or set HUE_BRIDGE_IP environment variable\n";
+    exit(1);
+}
+
+if (!$username) {
+    echo "❌ Username not provided\n";
+    echo "💡 Use -u <username> or set HUE_USERNAME environment variable\n";
+    echo "💡 To get a username, press the bridge button and run:\n";
+    echo "   php -r \"echo (new \\OguzhanTogay\\HueClient\\HueClient('{$bridgeIp}'))->register('hue-api', 'server');\"\n";
+    exit(1);
+}
+
+try {
+    echo "🚀 Starting Hue REST API Server...\n";
+    echo "🌉 Bridge: {$bridgeIp}\n";
+    echo "👤 Username: " . substr($username, 0, 8) . "...\n";
+    echo "🌐 Port: {$port}\n";
+    echo "📚 Documentation: http://localhost:{$port}/docs\n";
+    echo "🔧 API Base URL: http://localhost:{$port}/api\n\n";
+    
+    // Create Hue client
+    $hueClient = new HueClient($bridgeIp, $username);
+    
+    // Test connection
+    if (!$hueClient->isConnected()) {
+        echo "❌ Cannot connect to Hue Bridge\n";
+        echo "💡 Check bridge IP and username\n";
+        exit(1);
+    }
+    
+    echo "✅ Connected to Hue Bridge successfully\n";
+    echo "🎯 Server running... Press Ctrl+C to stop\n\n";
+    
+    // Set server port
+    $_ENV['SERVER_PORT'] = $port;
+    
+    // Create and run REST API
+    $api = new RestApi($hueClient);
+    $app = $api->getApp();
+    
+    $app->run();
+    
+} catch (Exception $e) {
+    echo "❌ Error starting server: " . $e->getMessage() . "\n";
+    exit(1);
+}

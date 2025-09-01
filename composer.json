@@ -1,0 +1,66 @@
+{
+    "name": "oguzhanT/philips-hue-client",
+    "description": "A modern, fully-featured PHP client for Philips Hue smart lights",
+    "type": "library",
+    "license": "MIT",
+    "keywords": ["philips", "hue", "smart-lights", "iot", "home-automation", "php"],
+    "authors": [
+        {
+            "name": "Oguzhan Togay",
+            "email": "oguzhan.togay@rgibilisim.com"
+        }
+    ],
+    "require": {
+        "php": "^8.2",
+        "guzzlehttp/guzzle": "^7.0",
+        "ext-json": "*",
+        "symfony/console": "^6.0|^7.0",
+        "psr/log": "^3.0",
+        "react/event-loop": "^1.0",
+        "clue/buzz-react": "^2.0",
+        "slim/slim": "^4.0",
+        "slim/psr7": "^1.0",
+        "cakephp/chronos": "^2.0",
+        "predis/predis": "^2.0",
+        "symfony/cache": "^6.0|^7.0",
+        "symfony/rate-limiter": "^6.0|^7.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "mockery/mockery": "^1.5",
+        "phpstan/phpstan": "^1.10",
+        "squizlabs/php_codesniffer": "^3.7",
+        "cebe/openapi": "^1.7",
+        "zircote/swagger-php": "^4.0",
+        "orchestra/testbench": "^8.0|^9.0",
+        "symfony/framework-bundle": "^6.0|^7.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "OguzhanTogay\\HueClient\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "OguzhanTogay\\HueClient\\Tests\\": "tests/"
+        }
+    },
+    "bin": [
+        "bin/hue",
+        "bin/hue-server"
+    ],
+    "scripts": {
+        "test": "vendor/bin/phpunit",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage",
+        "analyse": "vendor/bin/phpstan analyse",
+        "cs": "vendor/bin/phpcs --standard=PSR12 src/",
+        "cs-fix": "vendor/bin/phpcbf --standard=PSR12 src/",
+        "serve": "php -S localhost:8080 public/api.php",
+        "swagger": "vendor/bin/openapi src/ -o docs/openapi.json",
+        "docs": "vendor/bin/openapi src/ -o docs/openapi.yaml --format yaml"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "stable"
+}

@@ -1,0 +1,43 @@
+image: gitpod/workspace-php
+
+ports:
+  - port: 8080
+    onOpen: open-browser
+    description: Hue REST API Server
+  - port: 6379
+    onOpen: ignore
+    description: Redis Cache
+
+tasks:
+  - init: |
+      composer install
+      echo "🎉 Philips Hue Client development environment is ready!"
+      echo ""
+      echo "🚀 Quick start commands:"
+      echo "  composer serve    - Start REST API server"
+      echo "  ./bin/hue setup   - Configure Hue Bridge"
+      echo "  ./bin/hue lights  - List lights"
+      echo ""
+      echo "📚 Documentation will be available at:"
+      echo "  https://8080-$GITPOD_WORKSPACE_ID.$GITPOD_WORKSPACE_CLUSTER_HOST/docs"
+    command: |
+      echo "Development environment loaded!"
+      echo "Run 'composer serve' to start the API server"
+
+vscode:
+  extensions:
+    - bmewburn.vscode-intelephense-client
+    - ms-vscode.vscode-json
+    - humao.rest-client
+    - ms-vscode.thunder-client
+
+github:
+  prebuilds:
+    master:
+      - true
+    branches:
+      - true
+    pullRequests:
+      - true
+    pullRequestsFromForks:
+      - true

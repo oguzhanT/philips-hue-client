@@ -1,0 +1,435 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/vendor/autoload.php';
+
+use OguzhanTogay\HueClient\HueClient;
+use OguzhanTogay\HueClient\Exceptions\HueException;
+
+// ANSI renk kodları
+class Color {
+    const RESET = "\033[0m";
+    const BOLD = "\033[1m";
+    const GREEN = "\033[32m";
+    const YELLOW = "\033[33m";
+    const BLUE = "\033[34m";
+    const CYAN = "\033[36m";
+    const RED = "\033[31m";
+    const MAGENTA = "\033[35m";
+}
+
+// Hue renk paleti
+class HueColors {
+    const COLORS = [
+        'red' => [0.675, 0.322],
+        'green' => [0.408, 0.517],
+        'blue' => [0.167, 0.04],
+        'yellow' => [0.4325, 0.5007],
+        'orange' => [0.5614, 0.4156],
+        'purple' => [0.3787, 0.1724],
+        'pink' => [0.3688, 0.2095],
+        'cyan' => [0.1691, 0.1966],
+        'magenta' => [0.3823, 0.1856],
+        'lime' => [0.3144, 0.5988],
+        'white' => [0.3127, 0.329],
+        'warmwhite' => [0.4091, 0.394],
+        'coolwhite' => [0.2858, 0.2747]
+    ];
+    
+    public static function getXY($colorName) {
+        $color = strtolower($colorName);
+        return self::COLORS[$color] ?? null;
+    }
+    
+    public static function rgbToXY($r, $g, $b) {
+        $red = $r / 255;
+        $green = $g / 255;
+        $blue = $b / 255;
+        
+        $X = $red * 0.664511 + $green * 0.154324 + $blue * 0.162028;
+        $Y = $red * 0.283881 + $green * 0.668433 + $blue * 0.047685;
+        $Z = $red * 0.000088 + $green * 0.072310 + $blue * 0.986039;
+        
+        if (($X + $Y + $Z) > 0) {
+            $x = $X / ($X + $Y + $Z);
+            $y = $Y / ($X + $Y + $Z);
+            return [$x, $y];
+        }
+        
+        return null;
+    }
+    
+    public static function listColors() {
+        return array_keys(self::COLORS);
+    }
+}
+
+function printHelp() {
+    echo Color::BOLD . "Philips Hue CLI" . Color::RESET . "\n";
+    echo "================\n\n";
+    echo Color::YELLOW . "Kullanım:" . Color::RESET . "\n";
+    echo "  hue <komut> [argümanlar]\n\n";
+    
+    echo Color::YELLOW . "Komutlar:" . Color::RESET . "\n";
+    echo Color::CYAN . "  setup" . Color::RESET . "              Bridge kurulumu (IP ve kullanıcı oluşturma)\n";
+    echo Color::CYAN . "  lights" . Color::RESET . "             Tüm ışıkları listele\n";
+    echo Color::CYAN . "  on <id>" . Color::RESET . "            Işığı aç\n";
+    echo Color::CYAN . "  off <id>" . Color::RESET . "           Işığı kapat\n";
+    echo Color::CYAN . "  toggle <id>" . Color::RESET . "        Işık durumunu değiştir\n";
+    echo Color::CYAN . "  bri <id> <0-100>" . Color::RESET . "   Parlaklık ayarla (%)\n";
+    echo Color::CYAN . "  color <id> <renk>" . Color::RESET . "   Renk ayarla (red, blue, 255,0,0)\n";
+    echo Color::CYAN . "  groups" . Color::RESET . "             Grupları listele\n";
+    echo Color::CYAN . "  scenes" . Color::RESET . "             Sahneleri listele\n";
+    echo Color::CYAN . "  scene <id>" . Color::RESET . "         Sahneyi etkinleştir\n";
+    echo Color::CYAN . "  colors" . Color::RESET . "             Mevcut renkleri listele\n";
+    echo Color::CYAN . "  help" . Color::RESET . "               Bu yardım mesajını göster\n\n";
+    
+    echo Color::YELLOW . "Örnekler:" . Color::RESET . "\n";
+    echo "  hue setup                    # Bridge kurulumu\n";
+    echo "  hue lights                   # Işıkları listele\n";
+    echo "  hue on 1                     # 1 numaralı ışığı aç\n";
+    echo "  hue bri 1 50                 # 1 numaralı ışığı %50 parlaklığa ayarla\n";
+    echo "  hue color 1 red             # 1 numaralı ışığı kırmızı yap\n";
+    echo "  hue color 1 255,0,0         # 1 numaralı ışığı RGB ile kırmızı yap\n";
+    echo "  hue colors                   # Mevcut renkleri listele\n\n";
+}
+
+function loadConfig() {
+    $configFile = $_SERVER['HOME'] . '/.hue-config.json';
+    if (!file_exists($configFile)) {
+        return null;
+    }
+    return json_decode(file_get_contents($configFile), true);
+}
+
+function saveConfig($config) {
+    $configFile = $_SERVER['HOME'] . '/.hue-config.json';
+    file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT));
+}
+
+function setup() {
+    echo Color::BOLD . Color::GREEN . "Philips Hue Bridge Kurulumu" . Color::RESET . "\n";
+    echo "============================\n\n";
+    
+    // Bridge IP'yi al
+    echo "Bridge IP adresini girin (veya 'discover' yazın): ";
+    $bridgeIp = trim(fgets(STDIN));
+    
+    if ($bridgeIp === 'discover') {
+        echo "Bridge aranıyor...\n";
+        $ch = curl_init('https://discovery.meethue.com/');
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $response = curl_exec($ch);
+        curl_close($ch);
+        
+        $bridges = json_decode($response, true);
+        if (empty($bridges)) {
+            echo Color::RED . "Bridge bulunamadı!\n" . Color::RESET;
+            return;
+        }
+        
+        echo Color::GREEN . "Bulunan bridge'ler:\n" . Color::RESET;
+        foreach ($bridges as $index => $bridge) {
+            echo ($index + 1) . ". " . $bridge['internalipaddress'] . " (ID: " . $bridge['id'] . ")\n";
+        }
+        
+        echo "Seçiminiz (1-" . count($bridges) . "): ";
+        $choice = intval(trim(fgets(STDIN))) - 1;
+        
+        if ($choice < 0 || $choice >= count($bridges)) {
+            echo Color::RED . "Geçersiz seçim!\n" . Color::RESET;
+            return;
+        }
+        
+        $bridgeIp = $bridges[$choice]['internalipaddress'];
+    }
+    
+    echo "\nBridge IP: " . Color::CYAN . $bridgeIp . Color::RESET . "\n\n";
+    
+    // Kullanıcı oluştur
+    echo Color::YELLOW . "Bridge üzerindeki fiziksel butona basın ve Enter'a basın..." . Color::RESET;
+    fgets(STDIN);
+    
+    try {
+        $client = new HueClient($bridgeIp);
+        $username = $client->register('hue-cli', 'cli-device');
+        
+        echo Color::GREEN . "✓ Kullanıcı başarıyla oluşturuldu!\n" . Color::RESET;
+        echo "Username: " . Color::CYAN . $username . Color::RESET . "\n\n";
+        
+        // Konfigürasyonu kaydet
+        $config = [
+            'bridge_ip' => $bridgeIp,
+            'username' => $username
+        ];
+        saveConfig($config);
+        
+        echo Color::GREEN . "✓ Ayarlar ~/.hue-config.json dosyasına kaydedildi.\n" . Color::RESET;
+        echo "Artık 'hue' komutlarını kullanabilirsiniz!\n";
+        
+    } catch (HueException $e) {
+        echo Color::RED . "✗ Hata: " . $e->getMessage() . "\n" . Color::RESET;
+        echo "Bridge üzerindeki butona bastığınızdan emin olun!\n";
+    }
+}
+
+// Ana program
+$command = $argv[1] ?? 'help';
+
+if ($command === 'setup') {
+    setup();
+    exit(0);
+}
+
+if ($command === 'help' || $command === '--help' || $command === '-h') {
+    printHelp();
+    exit(0);
+}
+
+if ($command === 'colors') {
+    echo Color::BOLD . "MEVCUT RENKLER\n" . Color::RESET;
+    echo "--------------\n";
+    $colors = HueColors::listColors();
+    $colorCount = 0;
+    foreach ($colors as $color) {
+        $xy = HueColors::getXY($color);
+        echo sprintf("%s%-12s%s [%.3f, %.3f]", 
+            Color::CYAN, $color, Color::RESET, $xy[0], $xy[1]);
+        $colorCount++;
+        if ($colorCount % 3 == 0) {
+            echo "\n";
+        } else {
+            echo "  ";
+        }
+    }
+    if ($colorCount % 3 != 0) echo "\n";
+    echo "\nÖrnekler:\n";
+    echo "  hue color 1 red\n";
+    echo "  hue color 1 255,0,0\n";
+    echo "  hue color 1 255 0 0\n";
+    exit(0);
+}
+
+// Diğer komutlar için config yükle
+$config = loadConfig();
+if (!$config) {
+    echo Color::RED . "✗ Hata: Henüz kurulum yapılmamış!\n" . Color::RESET;
+    echo "Önce 'hue setup' komutunu çalıştırın.\n";
+    exit(1);
+}
+
+try {
+    $client = new HueClient($config['bridge_ip'], $config['username']);
+    
+    switch ($command) {
+        case 'lights':
+            $lights = $client->lights()->getAll();
+            if (empty($lights)) {
+                echo "Hiç ışık bulunamadı.\n";
+            } else {
+                echo Color::BOLD . "IŞIKLAR\n" . Color::RESET;
+                echo "-------\n";
+                foreach ($lights as $light) {
+                    $state = $light->getState();
+                    $status = $state->isOn() ? Color::GREEN . "●" : Color::RED . "○";
+                    $brightness = round(($state->getBrightness() ?? 0) / 254 * 100);
+                    
+                    echo sprintf(
+                        "%s %s[%d]%s %s (%%%d)\n",
+                        $status,
+                        Color::CYAN,
+                        $light->getId(),
+                        Color::RESET,
+                        $light->getName(),
+                        $brightness
+                    );
+                }
+            }
+            break;
+            
+        case 'on':
+            $lightId = $argv[2] ?? null;
+            if (!$lightId) {
+                echo Color::RED . "Kullanım: hue on <light_id>\n" . Color::RESET;
+                exit(1);
+            }
+            $light = $client->lights()->get($lightId);
+            $light->on();
+            echo Color::GREEN . "✓ Işık açıldı: " . $light->getName() . "\n" . Color::RESET;
+            break;
+            
+        case 'off':
+            $lightId = $argv[2] ?? null;
+            if (!$lightId) {
+                echo Color::RED . "Kullanım: hue off <light_id>\n" . Color::RESET;
+                exit(1);
+            }
+            $light = $client->lights()->get($lightId);
+            $light->off();
+            echo Color::YELLOW . "✓ Işık kapatıldı: " . $light->getName() . "\n" . Color::RESET;
+            break;
+            
+        case 'toggle':
+            $lightId = $argv[2] ?? null;
+            if (!$lightId) {
+                echo Color::RED . "Kullanım: hue toggle <light_id>\n" . Color::RESET;
+                exit(1);
+            }
+            $light = $client->lights()->get($lightId);
+            $light->toggle();
+            $newState = $light->refresh()->getState()->isOn() ? "açık" : "kapalı";
+            echo Color::GREEN . "✓ Işık durumu değiştirildi: " . $light->getName() . " ($newState)\n" . Color::RESET;
+            break;
+            
+        case 'bri':
+            $lightId = $argv[2] ?? null;
+            $brightness = $argv[3] ?? null;
+            if (!$lightId || !is_numeric($brightness)) {
+                echo Color::RED . "Kullanım: hue bri <light_id> <0-100>\n" . Color::RESET;
+                exit(1);
+            }
+            $light = $client->lights()->get($lightId);
+            $light->setBrightness($brightness);
+            echo Color::GREEN . "✓ Parlaklık ayarlandı: " . $light->getName() . " (%$brightness)\n" . Color::RESET;
+            break;
+            
+        case 'color':
+            $lightId = $argv[2] ?? null;
+            $colorInput = $argv[3] ?? null;
+            
+            if (!$lightId || !$colorInput) {
+                echo Color::RED . "Kullanım: hue color <light_id> <renk>\n" . Color::RESET;
+                echo "Renk örnekleri: red, blue, green, yellow, 255,0,0\n";
+                echo "Mevcut renkleri görmek için: hue colors\n";
+                exit(1);
+            }
+            
+            $light = $client->lights()->get($lightId);
+            $xy = null;
+            $colorName = '';
+            
+            // Önce isimli renk kontrolü
+            if ($xy = HueColors::getXY($colorInput)) {
+                $colorName = ucfirst($colorInput);
+            }
+            // RGB formatı kontrolü (255,0,0 veya "255 0 0")
+            else if (strpos($colorInput, ',') !== false) {
+                $rgb = explode(',', $colorInput);
+                if (count($rgb) == 3 && is_numeric($rgb[0]) && is_numeric($rgb[1]) && is_numeric($rgb[2])) {
+                    $xy = HueColors::rgbToXY(intval($rgb[0]), intval($rgb[1]), intval($rgb[2]));
+                    $colorName = "RGB({$rgb[0]},{$rgb[1]},{$rgb[2]})";
+                }
+            }
+            // Üç ayrı argüman olarak RGB
+            else {
+                $r = $argv[3] ?? null;
+                $g = $argv[4] ?? null;
+                $b = $argv[5] ?? null;
+                if (is_numeric($r) && is_numeric($g) && is_numeric($b)) {
+                    $xy = HueColors::rgbToXY(intval($r), intval($g), intval($b));
+                    $colorName = "RGB($r,$g,$b)";
+                }
+            }
+            
+            if ($xy) {
+                $light->setState(['xy' => $xy]);
+                echo Color::GREEN . "✓ Renk ayarlandı: " . $light->getName() . " → $colorName\n" . Color::RESET;
+            } else {
+                echo Color::RED . "Geçersiz renk: $colorInput\n" . Color::RESET;
+                echo "Kullanılabilir renk isimleri: " . implode(', ', HueColors::listColors()) . "\n";
+                echo "Veya RGB formatı: 255,0,0 veya 255 0 0\n";
+            }
+            break;
+            
+        case 'colors':
+            echo Color::BOLD . "MEVCUT RENKLER\n" . Color::RESET;
+            echo "--------------\n";
+            $colors = HueColors::listColors();
+            $colorCount = 0;
+            foreach ($colors as $color) {
+                $xy = HueColors::getXY($color);
+                echo sprintf("%s%-12s%s [%.3f, %.3f]", 
+                    Color::CYAN, $color, Color::RESET, $xy[0], $xy[1]);
+                $colorCount++;
+                if ($colorCount % 3 == 0) {
+                    echo "\n";
+                } else {
+                    echo "  ";
+                }
+            }
+            if ($colorCount % 3 != 0) echo "\n";
+            echo "\nÖrnekler:\n";
+            echo "  hue color 1 red\n";
+            echo "  hue color 1 255,0,0\n";
+            echo "  hue color 1 255 0 0\n";
+            break;
+            
+        case 'groups':
+            $groups = $client->groups()->getAll();
+            if (empty($groups)) {
+                echo "Hiç grup bulunamadı.\n";
+            } else {
+                echo Color::BOLD . "GRUPLAR\n" . Color::RESET;
+                echo "-------\n";
+                foreach ($groups as $group) {
+                    echo sprintf(
+                        "%s[%d]%s %s (%s, %d ışık)\n",
+                        Color::CYAN,
+                        $group->getId(),
+                        Color::RESET,
+                        $group->getName(),
+                        $group->getType(),
+                        count($group->getLights())
+                    );
+                }
+            }
+            break;
+            
+        case 'scenes':
+            $scenes = $client->scenes()->getAll();
+            if (empty($scenes)) {
+                echo "Hiç sahne bulunamadı.\n";
+            } else {
+                echo Color::BOLD . "SAHNELER\n" . Color::RESET;
+                echo "--------\n";
+                $count = 0;
+                foreach ($scenes as $scene) {
+                    if ($count++ >= 20) {
+                        echo Color::YELLOW . "... ve " . (count($scenes) - 20) . " sahne daha\n" . Color::RESET;
+                        break;
+                    }
+                    echo sprintf(
+                        "%s%s%s %s\n",
+                        Color::CYAN,
+                        substr($scene->getId(), 0, 8),
+                        Color::RESET,
+                        $scene->getName()
+                    );
+                }
+            }
+            break;
+            
+        case 'scene':
+            $sceneId = $argv[2] ?? null;
+            if (!$sceneId) {
+                echo Color::RED . "Kullanım: hue scene <scene_id>\n" . Color::RESET;
+                exit(1);
+            }
+            $scene = $client->scenes()->get($sceneId);
+            $scene->activate();
+            echo Color::GREEN . "✓ Sahne etkinleştirildi: " . $scene->getName() . "\n" . Color::RESET;
+            break;
+            
+        default:
+            echo Color::RED . "Bilinmeyen komut: $command\n" . Color::RESET;
+            echo "Yardım için 'hue help' komutunu kullanın.\n";
+            exit(1);
+    }
+    
+} catch (HueException $e) {
+    echo Color::RED . "✗ Hata: " . $e->getMessage() . "\n" . Color::RESET;
+    exit(1);
+} catch (Exception $e) {
+    echo Color::RED . "✗ Beklenmeyen hata: " . $e->getMessage() . "\n" . Color::RESET;
+    exit(1);
+}
