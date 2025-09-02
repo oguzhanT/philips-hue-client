@@ -24,7 +24,7 @@ class HueServiceProvider extends ServiceProvider
         $this->app->singleton(HueClient::class, function (Application $app) {
             $config = $app['config']['hue'];
             $bridgeConfig = $config['bridges'][$config['default']] ?? $config['bridges']['main'];
-            
+
             if (!$bridgeConfig['ip'] && $config['auto_discovery']) {
                 $discovery = new BridgeDiscovery();
                 $bridges = $discovery->discover();

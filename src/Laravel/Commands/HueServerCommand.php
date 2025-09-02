@@ -21,7 +21,7 @@ class HueServerCommand extends Command
 
         try {
             $hueClient = app(HueClient::class);
-            
+
             if (!$hueClient->isConnected()) {
                 $this->error('❌ Cannot connect to Hue Bridge');
                 $this->line('💡 Run: php artisan hue:setup');
@@ -35,15 +35,15 @@ class HueServerCommand extends Command
             $this->line("🔧 API Base: http://{$host}:{$port}/api");
             $this->newLine();
             $this->info('✅ Server running... Press Ctrl+C to stop');
-            
+
             // Set environment variables
             putenv("HUE_BRIDGE_IP={$hueClient->getBridgeIp()}");
             putenv("HUE_USERNAME={$hueClient->getUsername()}");
 
             // Start built-in PHP server
-            $publicPath = base_path('vendor/oguzhanT/philips-hue-client/public');
+            $publicPath = base_path('vendor/oguzhant/philips-hue-client/public');
             $router = $publicPath . '/api.php';
-            
+
             $command = "php -S {$host}:{$port} -t {$publicPath} {$router}";
             passthru($command);
 

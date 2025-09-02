@@ -45,10 +45,10 @@ class HueCache
         }
 
         $this->logger->debug("Cache miss, fetching data", ['key' => $cacheKey]);
-        
+
         $data = $dataProvider();
         $ttl = $this->defaultTtl[$resource] ?? 60;
-        
+
         $item->set($data);
         $item->expiresAfter($ttl);
         $this->cache->save($item);
@@ -62,9 +62,9 @@ class HueCache
     {
         $cacheKey = $this->buildCacheKey($resource, $key);
         $item = $this->cache->getItem($cacheKey);
-        
+
         $item->set($data);
-        
+
         if ($ttl !== null) {
             $item->expiresAfter($ttl);
         } else {
@@ -72,7 +72,7 @@ class HueCache
         }
 
         $success = $this->cache->save($item);
-        
+
         if ($success) {
             $this->logger->debug("Data cached successfully", ['key' => $cacheKey]);
         } else {
@@ -86,7 +86,7 @@ class HueCache
     {
         $cacheKey = $this->buildCacheKey($resource, $key);
         $success = $this->cache->deleteItem($cacheKey);
-        
+
         if ($success) {
             $this->logger->debug("Cache item deleted", ['key' => $cacheKey]);
         }
@@ -97,7 +97,7 @@ class HueCache
     public function invalidate(string $resource): bool
     {
         $pattern = $this->buildCacheKey($resource, '*');
-        
+
         // For filesystem cache, we need to clear by pattern
         if ($this->cache instanceof FilesystemAdapter) {
             return $this->cache->clear();
@@ -107,7 +107,7 @@ class HueCache
         if ($this->cache instanceof RedisAdapter) {
             $redis = $this->cache->getRedis();
             $keys = $redis->keys($pattern);
-            
+
             if (!empty($keys)) {
                 return $redis->del($keys) > 0;
             }
@@ -119,7 +119,7 @@ class HueCache
     public function clear(): bool
     {
         $success = $this->cache->clear();
-        
+
         if ($success) {
             $this->logger->info("Cache cleared successfully");
         } else {

@@ -161,23 +161,23 @@ class Group
     {
         $steps = 10;
         $stepDuration = $duration / $steps;
-        
+
         // Start dark and gradually brighten with warm colors
         $this->off();
         sleep(1);
-        
+
         for ($i = 1; $i <= $steps; $i++) {
             $brightness = (int) (($i / $steps) * 100);
             $temperature = 2000 + (int) ((4500 - 2000) * ($i / $steps));
-            
+
             $this->on()
                 ->setBrightness($brightness)
                 ->setColorTemperature($temperature)
                 ->transition($stepDuration * 1000);
-            
+
             sleep($stepDuration);
         }
-        
+
         return $this;
     }
 
@@ -185,18 +185,18 @@ class Group
     {
         $steps = 10;
         $stepDuration = $duration / $steps;
-        
+
         for ($i = $steps; $i >= 1; $i--) {
             $brightness = (int) (($i / $steps) * 100);
             $temperature = 6500 - (int) ((6500 - 2000) * (($steps - $i) / $steps));
-            
+
             $this->setBrightness($brightness)
                 ->setColorTemperature($temperature)
                 ->transition($stepDuration * 1000);
-            
+
             sleep($stepDuration);
         }
-        
+
         $this->off();
         return $this;
     }
@@ -204,11 +204,11 @@ class Group
     private function hexToRgb(string $hex): array
     {
         $hex = ltrim($hex, '#');
-        
+
         if (strlen($hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
-        
+
         return [
             'r' => hexdec(substr($hex, 0, 2)),
             'g' => hexdec(substr($hex, 2, 2)),

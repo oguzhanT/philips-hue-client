@@ -141,22 +141,22 @@ class Light
         for ($i = 0; $i < $repeat; $i++) {
             foreach ($frames as $frame) {
                 $state = [];
-                
+
                 if (isset($frame['color'])) {
                     $rgb = $this->hexToRgb($frame['color']);
                     $state['xy'] = $this->rgbToXy($rgb);
                 }
-                
+
                 if (isset($frame['brightness'])) {
                     $state['bri'] = (int) round(($frame['brightness'] / 100) * 254);
                 }
-                
+
                 if (isset($frame['duration'])) {
                     $state['transitiontime'] = (int) round($frame['duration'] / 100);
                 }
-                
+
                 $this->setState($state);
-                
+
                 if (isset($frame['duration'])) {
                     usleep($frame['duration'] * 1000);
                 }
@@ -167,11 +167,11 @@ class Light
     private function hexToRgb(string $hex): array
     {
         $hex = ltrim($hex, '#');
-        
+
         if (strlen($hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
-        
+
         return [
             'r' => hexdec(substr($hex, 0, 2)),
             'g' => hexdec(substr($hex, 2, 2)),

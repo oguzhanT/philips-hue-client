@@ -57,14 +57,21 @@ class RestApi
     private function setupMiddleware(): void
     {
         $this->app->addErrorMiddleware(true, true, true);
-        $this->app->add(new RateLimitMiddleware());
-        $this->app->add(new CacheMiddleware());
-        
+
+        if (class_exists('\Symfony\Component\RateLimiter\RateLimiterFactory')) {
+            $this->app->add(new RateLimitMiddleware());
+        }
+
+        if (class_exists('\Symfony\Component\Cache\Adapter\FilesystemAdapter')) {
+            $this->app->add(new CacheMiddleware());
+        }
+
         $this->app->add(function (Request $request, $handler): Response {
             $response = $handler->handle($request);
+            $headers = 'X-Requested-With, Content-Type, Accept, Origin, Authorization';
             return $response
                 ->withHeader('Access-Control-Allow-Origin', '*')
-                ->withHeader('Access-Control-Allow-Headers', 'X-Requested-With, Content-Type, Accept, Origin, Authorization')
+                ->withHeader('Access-Control-Allow-Headers', $headers)
                 ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
                 ->withHeader('Content-Type', 'application/json');
         });

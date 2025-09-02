@@ -37,7 +37,7 @@ class Lights
     public function getByName(string $name): ?Light
     {
         $lights = $this->getAll();
-        
+
         foreach ($lights as $light) {
             if (strcasecmp($light->getName(), $name) === 0) {
                 return $light;

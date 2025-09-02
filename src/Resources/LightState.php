@@ -69,11 +69,11 @@ class LightState
         if (!$this->isReachable()) {
             return 'Unreachable';
         }
-        
+
         return $this->isOn() ? 'On' : 'Off';
     }
 
-    public function set(string $key, $value): void
+    public function set(string $key, mixed $value): void
     {
         $this->state[$key] = $value;
     }

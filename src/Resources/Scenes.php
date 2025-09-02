@@ -34,7 +34,7 @@ class Scenes
     public function getByName(string $name): ?Scene
     {
         $scenes = $this->getAll();
-        
+
         foreach ($scenes as $scene) {
             if (strcasecmp($scene->getName(), $name) === 0) {
                 return $scene;
@@ -47,7 +47,7 @@ class Scenes
     public function activate(string $sceneIdOrName): bool
     {
         $sceneId = $sceneIdOrName;
-        
+
         // If it's not a scene ID, try to find by name
         if (!preg_match('/^[a-zA-Z0-9-]+$/', $sceneIdOrName)) {
             $scene = $this->getByName($sceneIdOrName);

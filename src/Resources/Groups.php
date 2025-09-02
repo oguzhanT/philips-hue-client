@@ -34,7 +34,7 @@ class Groups
     public function getByName(string $name): ?Group
     {
         $groups = $this->getAll();
-        
+
         foreach ($groups as $group) {
             if (strcasecmp($group->getName(), $name) === 0) {
                 return $group;

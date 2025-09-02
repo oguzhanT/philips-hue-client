@@ -15,13 +15,13 @@ class HueDiscoverCommand extends Command
     public function handle(): int
     {
         $this->info('🔍 Discovering Philips Hue bridges...');
-        
+
         $timeout = (int) $this->option('timeout');
         $discovery = new BridgeDiscovery();
-        
+
         try {
             $bridges = $discovery->discover($timeout);
-            
+
             if (empty($bridges)) {
                 $this->error('❌ No Hue bridges found on your network');
                 $this->line('💡 Make sure your bridge is connected and powered on');
@@ -44,7 +44,7 @@ class HueDiscoverCommand extends Command
             }
 
             $this->table($headers, $rows);
-            
+
             $this->newLine();
             $this->info('💡 To use a bridge, add these to your .env file:');
             $this->line("HUE_BRIDGE_IP={$bridges[0]->getIp()}");

@@ -30,7 +30,7 @@ class SchedulesController extends BaseController
         try {
             $schedules = $this->hueClient->schedules()->getAll();
             $scheduleData = [];
-            
+
             foreach ($schedules as $schedule) {
                 $scheduleData[] = [
                     'id' => $schedule->getId(),
@@ -38,11 +38,8 @@ class SchedulesController extends BaseController
                     'description' => $schedule->getDescription(),
                     'command' => $schedule->getCommand(),
                     'localtime' => $schedule->getLocalTime(),
-                    'time' => $schedule->getTime(),
                     'created' => $schedule->getCreated(),
-                    'status' => $schedule->getStatus(),
-                    'autodelete' => $schedule->isAutoDelete(),
-                    'starttime' => $schedule->getStartTime()
+                    'status' => $schedule->getStatus()
                 ];
             }
 
@@ -76,18 +73,15 @@ class SchedulesController extends BaseController
         try {
             $scheduleId = (int) $args['id'];
             $schedule = $this->hueClient->schedules()->get($scheduleId);
-            
+
             return $this->jsonResponse($response, [
                 'id' => $schedule->getId(),
                 'name' => $schedule->getName(),
                 'description' => $schedule->getDescription(),
                 'command' => $schedule->getCommand(),
                 'localtime' => $schedule->getLocalTime(),
-                'time' => $schedule->getTime(),
                 'created' => $schedule->getCreated(),
-                'status' => $schedule->getStatus(),
-                'autodelete' => $schedule->isAutoDelete(),
-                'starttime' => $schedule->getStartTime()
+                'status' => $schedule->getStatus()
             ]);
         } catch (\Exception $e) {
             return $this->errorResponse($response, $e->getMessage(), 404);
@@ -119,7 +113,7 @@ class SchedulesController extends BaseController
     {
         try {
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
             $validation = $this->validateJsonPayload($payload, ['name', 'command', 'localtime']);
             if ($validation) {
                 return $this->errorResponse($response, $validation);
@@ -128,8 +122,7 @@ class SchedulesController extends BaseController
             $schedule = $this->hueClient->schedules()->create(
                 $payload['name'],
                 $payload['command'],
-                $payload['localtime'],
-                $payload['description'] ?? ''
+                $payload['localtime']
             );
 
             return $this->successResponse($response, [
@@ -175,12 +168,13 @@ class SchedulesController extends BaseController
         try {
             $scheduleId = (int) $args['id'];
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
             if (!$payload) {
                 return $this->errorResponse($response, 'Invalid JSON payload');
             }
 
-            $this->hueClient->schedules()->update($scheduleId, $payload);
+            $schedule = $this->hueClient->schedules()->get($scheduleId);
+            $schedule->modify($payload);
 
             return $this->successResponse($response, null, 'Schedule updated successfully');
         } catch (\Exception $e) {

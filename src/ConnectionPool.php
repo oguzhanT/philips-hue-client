@@ -96,7 +96,7 @@ class ConnectionPool
     public function broadcastToAll(callable $action): array
     {
         $results = [];
-        
+
         foreach ($this->clients as $ip => $client) {
             try {
                 $results[$ip] = [

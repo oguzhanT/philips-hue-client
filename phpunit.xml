@@ -7,17 +7,10 @@
     <testsuites>
         <testsuite name="HueClient Test Suite">
             <directory>tests</directory>
+            <exclude>tests/Integration</exclude>
+            <exclude>tests/Laravel</exclude>
+            <exclude>tests/Symfony</exclude>
+            <exclude>tests/Api</exclude>
         </testsuite>
     </testsuites>
-    <source>
-        <include>
-            <directory suffix=".php">src/</directory>
-        </include>
-    </source>
-    <logging>
-        <junit outputFile="build/report.junit.xml"/>
-        <clover outputFile="build/coverage.xml"/>
-        <html outputDirectory="build/coverage" lowUpperBound="35" highLowerBound="70"/>
-        <text outputFile="build/coverage.txt" showUncoveredFiles="false"/>
-    </logging>
 </phpunit>

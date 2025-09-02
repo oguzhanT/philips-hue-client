@@ -41,11 +41,11 @@ class BridgeController extends BaseController
     public function health(Request $request, Response $response): Response
     {
         $startTime = microtime(true);
-        
+
         try {
             $connected = $this->hueClient->isConnected();
             $responseTime = round((microtime(true) - $startTime) * 1000, 2);
-            
+
             if ($connected) {
                 return $this->jsonResponse($response, [
                     'status' => 'healthy',

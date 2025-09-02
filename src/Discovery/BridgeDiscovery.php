@@ -21,7 +21,7 @@ class BridgeDiscovery
     public function discover(): array
     {
         $bridges = [];
-        
+
         foreach ($this->discoveryMethods as $method) {
             try {
                 $discovered = $this->{"discover" . ucfirst($method)}();
@@ -34,7 +34,7 @@ class BridgeDiscovery
         // Remove duplicates based on bridge ID
         $uniqueBridges = [];
         $seenIds = [];
-        
+
         foreach ($bridges as $bridge) {
             if (!in_array($bridge->getId(), $seenIds)) {
                 $uniqueBridges[] = $bridge;
@@ -90,9 +90,9 @@ class BridgeDiscovery
             $response = $this->httpClient->get("https://{$ip}/api/config", [
                 'verify' => false
             ]);
-            
+
             $data = json_decode($response->getBody()->getContents(), true);
-            
+
             if (isset($data['bridgeid'])) {
                 return new Bridge(
                     $data['bridgeid'],

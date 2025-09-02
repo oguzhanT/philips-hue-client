@@ -32,9 +32,9 @@ class LightsControllerTest extends TestCase
 
     public function testGetAllLights(): void
     {
-        $mockLights = Mockery::mock();
-        $mockLight = Mockery::mock();
-        $mockState = Mockery::mock();
+        $mockLights = Mockery::mock(\OguzhanTogay\HueClient\Resources\Lights::class);
+        $mockLight = Mockery::mock(\OguzhanTogay\HueClient\Resources\Light::class);
+        $mockState = Mockery::mock(\OguzhanTogay\HueClient\Resources\LightState::class);
 
         $this->mockClient->shouldReceive('lights')->andReturn($mockLights);
         $mockLights->shouldReceive('getAll')->andReturn([$mockLight]);
@@ -43,10 +43,8 @@ class LightsControllerTest extends TestCase
         $mockLight->shouldReceive('getName')->andReturn('Test Light');
         $mockLight->shouldReceive('getType')->andReturn('Extended color light');
         $mockLight->shouldReceive('getState')->andReturn($mockState);
-        $mockLight->shouldReceive('getManufacturerName')->andReturn('Philips');
+        $mockLight->shouldReceive('getManufacturer')->andReturn('Philips');
         $mockLight->shouldReceive('getModelId')->andReturn('LCT015');
-        $mockLight->shouldReceive('getSwVersion')->andReturn('1.65.11');
-        $mockLight->shouldReceive('isReachable')->andReturn(true);
         
         $mockState->shouldReceive('toArray')->andReturn([
             'on' => true,
@@ -67,8 +65,8 @@ class LightsControllerTest extends TestCase
 
     public function testSetLightState(): void
     {
-        $mockLights = Mockery::mock();
-        $mockLight = Mockery::mock();
+        $mockLights = Mockery::mock(\OguzhanTogay\HueClient\Resources\Lights::class);
+        $mockLight = Mockery::mock(\OguzhanTogay\HueClient\Resources\Light::class);
 
         $this->mockClient->shouldReceive('lights')->andReturn($mockLights);
         $mockLights->shouldReceive('get')->with(1)->andReturn($mockLight);
@@ -93,8 +91,8 @@ class LightsControllerTest extends TestCase
 
     public function testUpdateLightStateWithColor(): void
     {
-        $mockLights = Mockery::mock();
-        $mockLight = Mockery::mock();
+        $mockLights = Mockery::mock(\OguzhanTogay\HueClient\Resources\Lights::class);
+        $mockLight = Mockery::mock(\OguzhanTogay\HueClient\Resources\Light::class);
 
         $this->mockClient->shouldReceive('lights')->andReturn($mockLights);
         $mockLights->shouldReceive('get')->with(1)->andReturn($mockLight);

@@ -18,7 +18,7 @@ class HueCompilerPass implements CompilerPassInterface
         if ($container->hasDefinition('hue.connection_pool')) {
             $poolDefinition = $container->getDefinition('hue.connection_pool');
             $config = $container->getParameter('hue.config') ?? [];
-            
+
             if (isset($config['bridges'])) {
                 foreach ($config['bridges'] as $name => $bridgeConfig) {
                     if (isset($bridgeConfig['ip'], $bridgeConfig['username'])) {

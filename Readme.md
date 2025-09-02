@@ -39,7 +39,7 @@ A modern, fully-featured PHP client for Philips Hue smart lights. Control lights
 Install via Composer:
 
 ```bash
-composer require oguzhanT/philips-hue-client
+composer require oguzhant/philips-hue-client
 ```
 
 ## 🔧 Quick Start
@@ -220,7 +220,7 @@ The package includes a powerful CLI tool:
 
 ```bash
 # Install globally
-composer global require oguzhanT/philips-hue-client
+composer global require oguzhant/philips-hue-client
 
 # Discover bridges
 hue discover
@@ -362,7 +362,7 @@ CACHE_TTL=300
 
 ```bash
 # Install the package
-composer require oguzhanT/philips-hue-client
+composer require oguzhant/philips-hue-client
 
 # Publish configuration
 php artisan vendor:publish --tag=hue-config
@@ -509,7 +509,7 @@ php artisan cache:clear --tags=hue
 
 ```bash
 # Install the package
-composer require oguzhanT/philips-hue-client
+composer require oguzhant/philips-hue-client
 
 # Discover bridges
 bin/console hue:discover

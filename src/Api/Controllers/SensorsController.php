@@ -40,19 +40,18 @@ class SensorsController extends BaseController
         try {
             $sensors = $this->hueClient->sensors()->getAll();
             $sensorData = [];
-            
+
             foreach ($sensors as $sensor) {
                 $sensorData[] = [
                     'id' => $sensor->getId(),
                     'name' => $sensor->getName(),
                     'type' => $sensor->getType(),
                     'modelid' => $sensor->getModelId(),
-                    'manufacturername' => $sensor->getManufacturerName(),
+                    'manufacturername' => $sensor->getManufacturer(),
                     'swversion' => $sensor->getSwVersion(),
                     'state' => $sensor->getState(),
                     'config' => $sensor->getConfig(),
-                    'uniqueid' => $sensor->getUniqueId(),
-                    'capabilities' => $sensor->getCapabilities()
+                    'uniqueid' => $sensor->getUniqueId()
                 ];
             }
 
@@ -86,18 +85,17 @@ class SensorsController extends BaseController
         try {
             $sensorId = (int) $args['id'];
             $sensor = $this->hueClient->sensors()->get($sensorId);
-            
+
             return $this->jsonResponse($response, [
                 'id' => $sensor->getId(),
                 'name' => $sensor->getName(),
                 'type' => $sensor->getType(),
                 'modelid' => $sensor->getModelId(),
-                'manufacturername' => $sensor->getManufacturerName(),
+                'manufacturername' => $sensor->getManufacturer(),
                 'swversion' => $sensor->getSwVersion(),
                 'state' => $sensor->getState(),
                 'config' => $sensor->getConfig(),
-                'uniqueid' => $sensor->getUniqueId(),
-                'capabilities' => $sensor->getCapabilities()
+                'uniqueid' => $sensor->getUniqueId()
             ]);
         } catch (\Exception $e) {
             return $this->errorResponse($response, $e->getMessage(), 404);
@@ -134,13 +132,18 @@ class SensorsController extends BaseController
         try {
             $sensorId = (int) $args['id'];
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
+            if (!$payload) {
+                return $this->errorResponse($response, 'Invalid JSON payload');
+            }
+
             $validation = $this->validateJsonPayload($payload, ['state']);
             if ($validation) {
                 return $this->errorResponse($response, $validation);
             }
 
-            $this->hueClient->sensors()->updateState($sensorId, $payload['state']);
+            $sensor = $this->hueClient->sensors()->get($sensorId);
+            $sensor->updateState($payload['state']);
 
             return $this->successResponse($response, null, 'Sensor state updated successfully');
         } catch (\Exception $e) {

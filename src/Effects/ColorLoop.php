@@ -10,7 +10,7 @@ class ColorLoop extends BaseEffect
     public function start($target, int $duration = 30, int $speed = 1000): void
     {
         $this->running = true;
-        
+
         // Enable color loop effect
         $this->setLightState($target, [
             'on' => true,
@@ -36,7 +36,9 @@ class ColorLoop extends BaseEffect
 
         for ($cycle = 0; $cycle < $cycles && $this->running; $cycle++) {
             foreach ($colors as $color) {
-                if (!$this->running) break;
+                if (!$this->running) {
+                    break;
+                }
 
                 $rgb = $this->hexToRgb($color);
                 $xy = $this->rgbToXy($rgb);
@@ -57,11 +59,11 @@ class ColorLoop extends BaseEffect
     private function hexToRgb(string $hex): array
     {
         $hex = ltrim($hex, '#');
-        
+
         if (strlen($hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
-        
+
         return [
             'r' => hexdec(substr($hex, 0, 2)),
             'g' => hexdec(substr($hex, 2, 2)),

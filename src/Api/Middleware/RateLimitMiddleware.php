@@ -41,7 +41,7 @@ class RateLimitMiddleware implements MiddlewareInterface
         }
 
         $response = $handler->handle($request);
-        
+
         return $response->withHeader('X-RateLimit-Limit', '100')
                       ->withHeader('X-RateLimit-Remaining', (string)$limiter->consume()->getRemainingTokens());
     }
@@ -49,15 +49,15 @@ class RateLimitMiddleware implements MiddlewareInterface
     private function getClientIp(Request $request): string
     {
         $serverParams = $request->getServerParams();
-        
+
         if (!empty($serverParams['HTTP_X_FORWARDED_FOR'])) {
             return explode(',', $serverParams['HTTP_X_FORWARDED_FOR'])[0];
         }
-        
+
         if (!empty($serverParams['HTTP_X_REAL_IP'])) {
             return $serverParams['HTTP_X_REAL_IP'];
         }
-        
+
         return $serverParams['REMOTE_ADDR'] ?? '127.0.0.1';
     }
 }

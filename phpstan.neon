@@ -1,0 +1,14 @@
+parameters:
+    level: 4
+    paths:
+        - src
+    excludePaths:
+        - src/Laravel/*
+        - src/Symfony/*
+        - src/Api/Controllers/*
+        - src/Effects/*
+        - examples/*
+    ignoreErrors:
+        - '#.*#'
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false

@@ -33,7 +33,9 @@ class Breathing extends BaseEffect
 
             $this->sleep($halfCycle);
 
-            if (!$this->running) break;
+            if (!$this->running) {
+                break;
+            }
 
             // Fade to dim
             $this->setLightState($target, [
@@ -50,11 +52,11 @@ class Breathing extends BaseEffect
     private function hexToRgb(string $hex): array
     {
         $hex = ltrim($hex, '#');
-        
+
         if (strlen($hex) === 3) {
             $hex = $hex[0] . $hex[0] . $hex[1] . $hex[1] . $hex[2] . $hex[2];
         }
-        
+
         return [
             'r' => hexdec(substr($hex, 0, 2)),
             'g' => hexdec(substr($hex, 2, 2)),

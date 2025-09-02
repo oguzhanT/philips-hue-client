@@ -99,7 +99,7 @@ class HueCommand extends Command
     private function discoverBridges(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln('Discovering Hue bridges...');
-        
+
         $discovery = new BridgeDiscovery();
         $bridges = $discovery->discover();
 
@@ -145,14 +145,16 @@ class HueCommand extends Command
         $client = new HueClient($bridge->getIp());
 
         // Register
-        $question = new ConfirmationQuestion('Press the link button on your Hue Bridge, then press Enter to continue: ');
+        $question = new ConfirmationQuestion(
+            'Press the link button on your Hue Bridge, then press Enter to continue: '
+        );
         if (!$helper->ask($input, $output, $question)) {
             return Command::FAILURE;
         }
 
         try {
             $username = $client->register('hue-cli', gethostname());
-            
+
             // Save config
             $this->config = [
                 'bridge_ip' => $bridge->getIp(),
@@ -163,7 +165,7 @@ class HueCommand extends Command
             $output->writeln("<info>Successfully connected to bridge!</info>");
             $output->writeln("Username: {$username}");
             $output->writeln("Configuration saved to: {$this->configFile}");
-            
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $output->writeln("<error>Failed to register: {$e->getMessage()}</error>");
@@ -212,7 +214,9 @@ class HueCommand extends Command
         $table->setHeaders(['ID', 'Name', 'Type', 'Lights', 'Any On']);
 
         foreach ($groups as $group) {
-            if ($group->getId() === 0) continue; // Skip "All lights" group
+            if ($group->getId() === 0) {
+                continue; // Skip "All lights" group
+            }
 
             $table->addRow([
                 $group->getId(),
@@ -318,12 +322,14 @@ class HueCommand extends Command
         } elseif ($target) {
             // Try as light first, then as group
             $light = is_numeric($target) ? $client->lights()->get((int)$target) : $client->lights()->getByName($target);
-            
+
             if ($light) {
                 $this->executeAction($light, $action, $value);
                 $output->writeln("<info>Applied {$action} to light '{$light->getName()}'</info>");
             } else {
-                $group = is_numeric($target) ? $client->groups()->get((int)$target) : $client->groups()->getByName($target);
+                $group = is_numeric($target)
+                    ? $client->groups()->get((int)$target)
+                    : $client->groups()->getByName($target);
                 if ($group) {
                     $this->executeAction($group, $action, $value);
                     $output->writeln("<info>Applied {$action} to group '{$group->getName()}'</info>");
@@ -439,8 +445,10 @@ class HueCommand extends Command
             $question = new Question('hue> ');
             $command = $helper->ask($input, $output, $question);
 
-            if (!$command) continue;
-            
+            if (!$command) {
+                continue;
+            }
+
             if (trim($command) === 'exit') {
                 break;
             }
@@ -485,7 +493,7 @@ class HueCommand extends Command
     private function startServer(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln('<info>Starting Hue REST API Server...</info>');
-        
+
         $bridgeIp = $this->config['bridge_ip'] ?? null;
         $username = $this->config['username'] ?? null;
         $port = 8080;
@@ -509,7 +517,7 @@ class HueCommand extends Command
         // Start the built-in PHP server
         $publicPath = __DIR__ . '/../../public';
         $command = "php -S localhost:{$port} -t {$publicPath} {$publicPath}/api.php";
-        
+
         passthru($command);
         return Command::SUCCESS;
     }
@@ -585,27 +593,29 @@ class HueCommand extends Command
         try {
             $config = $client->getConfig();
             $isConnected = $client->isConnected();
-            
+
             $output->writeln('<info>Hue Bridge Status</info>');
             $output->writeln("Bridge IP: {$this->config['bridge_ip']}");
-            $output->writeln("Bridge Name: " . ($config['name'] ?? 'Unknown'));
+            $bridgeName = $config['name'] ?? 'Unknown';
+            $output->writeln("Bridge Name: {$bridgeName}");
             $output->writeln("API Version: " . ($config['apiversion'] ?? 'Unknown'));
             $output->writeln("Software Version: " . ($config['swversion'] ?? 'Unknown'));
             $output->writeln("Model: " . ($config['modelid'] ?? 'Unknown'));
-            $output->writeln("Connection: " . ($isConnected ? '<info>Connected</info>' : '<error>Disconnected</error>'));
-            
+            $connectionStatus = $isConnected ? '<info>Connected</info>' : '<error>Disconnected</error>';
+            $output->writeln("Connection: {$connectionStatus}");
+
             if ($isConnected) {
                 $lightCount = count($client->lights()->getAll());
                 $groupCount = count($client->groups()->getAll());
                 $sceneCount = count($client->scenes()->getAll());
-                
+
                 $output->writeln("");
                 $output->writeln("Resources:");
                 $output->writeln("  Lights: {$lightCount}");
                 $output->writeln("  Groups: {$groupCount}");
                 $output->writeln("  Scenes: {$sceneCount}");
             }
-            
+
             return Command::SUCCESS;
         } catch (\Exception $e) {
             $output->writeln("<error>Error getting status: {$e->getMessage()}</error>");

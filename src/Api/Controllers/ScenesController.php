@@ -40,7 +40,7 @@ class ScenesController extends BaseController
         try {
             $scenes = $this->hueClient->scenes()->getAll();
             $sceneData = [];
-            
+
             foreach ($scenes as $scene) {
                 $sceneData[] = [
                     'id' => $scene->getId(),
@@ -49,7 +49,7 @@ class ScenesController extends BaseController
                     'group' => $scene->getGroup(),
                     'lights' => $scene->getLights(),
                     'owner' => $scene->getOwner(),
-                    'recycle' => $scene->isRecyclable(),
+                    'recycle' => $scene->isRecycle(),
                     'locked' => $scene->isLocked(),
                     'picture' => $scene->getPicture(),
                     'lastupdated' => $scene->getLastUpdated()
@@ -86,7 +86,7 @@ class ScenesController extends BaseController
         try {
             $sceneId = $args['id'];
             $scene = $this->hueClient->scenes()->get($sceneId);
-            
+
             return $this->jsonResponse($response, [
                 'id' => $scene->getId(),
                 'name' => $scene->getName(),
@@ -94,7 +94,7 @@ class ScenesController extends BaseController
                 'group' => $scene->getGroup(),
                 'lights' => $scene->getLights(),
                 'owner' => $scene->getOwner(),
-                'recycle' => $scene->isRecyclable(),
+                'recycle' => $scene->isRecycle(),
                 'locked' => $scene->isLocked(),
                 'picture' => $scene->getPicture(),
                 'lastupdated' => $scene->getLastUpdated(),
@@ -129,7 +129,7 @@ class ScenesController extends BaseController
     {
         try {
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
             $validation = $this->validateJsonPayload($payload, ['name']);
             if ($validation) {
                 return $this->errorResponse($response, $validation);
@@ -165,7 +165,12 @@ class ScenesController extends BaseController
      *     ),
      *     @OA\RequestBody(
      *         @OA\JsonContent(
-     *             @OA\Property(property="transitiontime", type="integer", example=4, description="Transition time in deciseconds")
+     *             @OA\Property(
+     *                 property="transitiontime",
+     *                 type="integer",
+     *                 example=4,
+     *                 description="Transition time in deciseconds"
+     *             )
      *         )
      *     ),
      *     @OA\Response(
@@ -179,8 +184,8 @@ class ScenesController extends BaseController
         try {
             $sceneId = $args['id'];
             $payload = json_decode($request->getBody()->getContents(), true) ?? [];
-            
-            $this->hueClient->scenes()->activate($sceneId, $payload['transitiontime'] ?? null);
+
+            $this->hueClient->scenes()->activate($sceneId);
 
             return $this->successResponse($response, null, 'Scene activated successfully');
         } catch (\Exception $e) {

@@ -35,15 +35,15 @@ class HueDiscoverCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        
+
         $io->title('🔍 Philips Hue Bridge Discovery');
-        
+
         $timeout = (int) $input->getOption('timeout');
-        
+
         try {
             $io->text('Scanning network for Hue bridges...');
-            $bridges = $this->discovery->discover($timeout);
-            
+            $bridges = $this->discovery->discover();
+
             if (empty($bridges)) {
                 $io->error('❌ No Hue bridges found on your network');
                 $io->note('Make sure your bridge is connected and powered on');
@@ -63,7 +63,7 @@ class HueDiscoverCommand extends Command
             }
 
             $io->table(['ID', 'IP Address', 'Name', 'Model'], $rows);
-            
+
             $io->note('💡 To configure in Symfony:');
             $io->text([
                 'Add to your .env file:',

@@ -44,17 +44,15 @@ class LightsController extends BaseController
         try {
             $lights = $this->hueClient->lights()->getAll();
             $lightData = [];
-            
+
             foreach ($lights as $light) {
                 $lightData[] = [
                     'id' => $light->getId(),
                     'name' => $light->getName(),
                     'type' => $light->getType(),
                     'state' => $light->getState()->toArray(),
-                    'manufacturername' => $light->getManufacturerName(),
-                    'modelid' => $light->getModelId(),
-                    'swversion' => $light->getSwVersion(),
-                    'reachable' => $light->isReachable()
+                    'manufacturername' => $light->getManufacturer(),
+                    'modelid' => $light->getModelId()
                 ];
             }
 
@@ -97,16 +95,14 @@ class LightsController extends BaseController
         try {
             $lightId = (int) $args['id'];
             $light = $this->hueClient->lights()->get($lightId);
-            
+
             return $this->jsonResponse($response, [
                 'id' => $light->getId(),
                 'name' => $light->getName(),
                 'type' => $light->getType(),
                 'state' => $light->getState()->toArray(),
-                'manufacturername' => $light->getManufacturerName(),
-                'modelid' => $light->getModelId(),
-                'swversion' => $light->getSwVersion(),
-                'reachable' => $light->isReachable()
+                'manufacturername' => $light->getManufacturer(),
+                'modelid' => $light->getModelId()
             ]);
         } catch (\Exception $e) {
             return $this->errorResponse($response, $e->getMessage(), 404);
@@ -151,27 +147,27 @@ class LightsController extends BaseController
         try {
             $lightId = (int) $args['id'];
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
             if (!$payload) {
                 return $this->errorResponse($response, 'Invalid JSON payload');
             }
 
             $light = $this->hueClient->lights()->get($lightId);
-            
+
             if (isset($payload['on'])) {
                 $payload['on'] ? $light->on() : $light->off();
             }
-            
+
             if (isset($payload['brightness'])) {
                 $light->setBrightness((int) ($payload['brightness'] / 254 * 100));
             }
-            
+
             if (isset($payload['hue']) || isset($payload['saturation'])) {
                 $hue = $payload['hue'] ?? $light->getState()->getHue();
                 $sat = $payload['saturation'] ?? $light->getState()->getSaturation();
                 $light->setHueSaturation($hue, $sat);
             }
-            
+
             if (isset($payload['transitiontime'])) {
                 $light->transition($payload['transitiontime'] * 100);
             }
@@ -214,21 +210,21 @@ class LightsController extends BaseController
         try {
             $lightId = (int) $args['id'];
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
             if (!$payload) {
                 return $this->errorResponse($response, 'Invalid JSON payload');
             }
 
             $light = $this->hueClient->lights()->get($lightId);
-            
+
             if (isset($payload['brightness'])) {
                 $light->setBrightness((int) $payload['brightness']);
             }
-            
+
             if (isset($payload['color'])) {
                 $light->setColor($payload['color']);
             }
-            
+
             if (isset($payload['temperature'])) {
                 $light->setColorTemperature((int) $payload['temperature']);
             }
@@ -269,7 +265,7 @@ class LightsController extends BaseController
         try {
             $lightId = (int) $args['id'];
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
             $validation = $this->validateJsonPayload($payload, ['name']);
             if ($validation) {
                 return $this->errorResponse($response, $validation);

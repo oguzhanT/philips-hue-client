@@ -36,7 +36,7 @@ class Alert extends BaseEffect
     public function stop($target): void
     {
         parent::stop();
-        
+
         $this->setLightState($target, [
             'alert' => 'none'
         ]);

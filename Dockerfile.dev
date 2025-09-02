@@ -31,7 +31,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /workspace
 
 # Copy composer files
-COPY composer.json composer.lock ./
+COPY composer.json ./
 
 # Install dependencies including dev dependencies
 RUN composer install --optimize-autoloader

@@ -25,7 +25,7 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www
 
 # Copy composer files
-COPY composer.json composer.lock ./
+COPY composer.json ./
 
 # Install dependencies
 RUN composer install --no-dev --optimize-autoloader --no-interaction
@@ -35,7 +35,6 @@ COPY . .
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www \
-    && chmod -R 755 /var/www/storage \
     && chmod +x bin/hue \
     && chmod +x bin/hue-server
 

@@ -59,7 +59,7 @@ class GroupAction
         return $this->action['effect'] ?? null;
     }
 
-    public function set(string $key, $value): void
+    public function set(string $key, mixed $value): void
     {
         $this->action[$key] = $value;
     }

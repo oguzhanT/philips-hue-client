@@ -26,7 +26,7 @@ class HueClient
     private array $config;
     private RetryHandler $retryHandler;
     private ?HueCache $cache;
-    
+
     private ?Lights $lights = null;
     private ?Groups $groups = null;
     private ?Scenes $scenes = null;
@@ -65,7 +65,7 @@ class HueClient
             $this->logger
         );
 
-        if ($this->config['cache_enabled']) {
+        if ($this->config['cache_enabled'] && class_exists('\Symfony\Component\Cache\Adapter\FilesystemAdapter')) {
             $this->cache = new HueCache(
                 $this->config['cache_type'],
                 $config,
@@ -77,7 +77,7 @@ class HueClient
     public function register(string $appName, string $deviceName = null): string
     {
         $deviceName = $deviceName ?? gethostname();
-        
+
         $payload = [
             'devicetype' => "{$appName}#{$deviceName}"
         ];
@@ -143,7 +143,7 @@ class HueClient
 
         try {
             $data = $this->retryHandler->execute($operation, "HTTP {$method} {$endpoint}");
-            
+
             // Cache GET responses
             if ($method === 'GET' && $this->cache && $data) {
                 $this->cache->set('api', $cacheKey, $data);

@@ -25,10 +25,10 @@ class HueExtension extends Extension
 
         // Register HueClient
         $this->registerHueClient($container, $config);
-        
+
         // Register ConnectionPool if multiple bridges configured
         $this->registerConnectionPool($container, $config);
-        
+
         // Register BridgeDiscovery
         $this->registerBridgeDiscovery($container, $config);
 

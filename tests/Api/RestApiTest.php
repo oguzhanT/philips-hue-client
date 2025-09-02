@@ -59,7 +59,7 @@ class RestApiTest extends TestCase
 
     public function testLightsEndpoint(): void
     {
-        $mockLights = Mockery::mock();
+        $mockLights = Mockery::mock(\OguzhanTogay\HueClient\Resources\Lights::class);
         $mockLight = Mockery::mock();
         $mockState = Mockery::mock();
 
@@ -70,10 +70,8 @@ class RestApiTest extends TestCase
         $mockLight->shouldReceive('getName')->andReturn('Test Light');
         $mockLight->shouldReceive('getType')->andReturn('Extended color light');
         $mockLight->shouldReceive('getState')->andReturn($mockState);
-        $mockLight->shouldReceive('getManufacturerName')->andReturn('Philips');
+        $mockLight->shouldReceive('getManufacturer')->andReturn('Philips');
         $mockLight->shouldReceive('getModelId')->andReturn('LCT015');
-        $mockLight->shouldReceive('getSwVersion')->andReturn('1.65.11');
-        $mockLight->shouldReceive('isReachable')->andReturn(true);
         
         $mockState->shouldReceive('toArray')->andReturn([
             'on' => true,
@@ -94,7 +92,7 @@ class RestApiTest extends TestCase
 
     public function testGroupsEndpoint(): void
     {
-        $mockGroups = Mockery::mock();
+        $mockGroups = Mockery::mock(\OguzhanTogay\HueClient\Resources\Groups::class);
         $mockGroup = Mockery::mock();
         $mockState = Mockery::mock();
 
@@ -107,7 +105,6 @@ class RestApiTest extends TestCase
         $mockGroup->shouldReceive('getLights')->andReturn([1, 2, 3]);
         $mockGroup->shouldReceive('getState')->andReturn($mockState);
         $mockGroup->shouldReceive('getClass')->andReturn('Living room');
-        $mockGroup->shouldReceive('isRecyclable')->andReturn(false);
         
         $mockState->shouldReceive('toArray')->andReturn([
             'all_on' => true,

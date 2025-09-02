@@ -45,7 +45,7 @@ class HueSetupCommand extends Command
             $client = new HueClient($bridgeIp);
 
             $this->warn('⚠️  Press the link button on your Hue Bridge now!');
-            
+
             if (!$this->confirm('Press Enter when you have pressed the link button')) {
                 $this->info('Setup cancelled');
                 return self::FAILURE;
@@ -56,11 +56,11 @@ class HueSetupCommand extends Command
 
             $this->info('✅ Successfully registered with bridge!');
             $this->newLine();
-            
+
             $this->info('📝 Add these to your .env file:');
             $this->line("HUE_BRIDGE_IP={$bridgeIp}");
             $this->line("HUE_USERNAME={$username}");
-            
+
             $this->newLine();
             $this->info('🎉 Setup complete! You can now use the Hue facade in your Laravel app');
             $this->line('Example: Hue::lights()->getAll()');

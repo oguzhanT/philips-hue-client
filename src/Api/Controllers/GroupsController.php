@@ -40,7 +40,7 @@ class GroupsController extends BaseController
         try {
             $groups = $this->hueClient->groups()->getAll();
             $groupData = [];
-            
+
             foreach ($groups as $group) {
                 $groupData[] = [
                     'id' => $group->getId(),
@@ -48,8 +48,7 @@ class GroupsController extends BaseController
                     'type' => $group->getType(),
                     'lights' => $group->getLights(),
                     'state' => $group->getState()->toArray(),
-                    'class' => $group->getClass(),
-                    'recycle' => $group->isRecyclable()
+                    'class' => $group->getClass()
                 ];
             }
 
@@ -85,7 +84,7 @@ class GroupsController extends BaseController
         try {
             $rooms = $this->hueClient->groups()->getRooms();
             $roomData = [];
-            
+
             foreach ($rooms as $room) {
                 $roomData[] = [
                     'id' => $room->getId(),
@@ -120,7 +119,7 @@ class GroupsController extends BaseController
         try {
             $zones = $this->hueClient->groups()->getZones();
             $zoneData = [];
-            
+
             foreach ($zones as $zone) {
                 $zoneData[] = [
                     'id' => $zone->getId(),
@@ -162,15 +161,14 @@ class GroupsController extends BaseController
         try {
             $groupId = (int) $args['id'];
             $group = $this->hueClient->groups()->get($groupId);
-            
+
             return $this->jsonResponse($response, [
                 'id' => $group->getId(),
                 'name' => $group->getName(),
                 'type' => $group->getType(),
                 'lights' => $group->getLights(),
                 'state' => $group->getState()->toArray(),
-                'class' => $group->getClass(),
-                'recycle' => $group->isRecyclable()
+                'class' => $group->getClass()
             ]);
         } catch (\Exception $e) {
             return $this->errorResponse($response, $e->getMessage(), 404);
@@ -201,7 +199,7 @@ class GroupsController extends BaseController
     {
         try {
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
             $validation = $this->validateJsonPayload($payload, ['name', 'lights']);
             if ($validation) {
                 return $this->errorResponse($response, $validation);
@@ -254,21 +252,21 @@ class GroupsController extends BaseController
         try {
             $groupId = (int) $args['id'];
             $payload = json_decode($request->getBody()->getContents(), true);
-            
+
             if (!$payload) {
                 return $this->errorResponse($response, 'Invalid JSON payload');
             }
 
             $group = $this->hueClient->groups()->get($groupId);
-            
+
             if (isset($payload['on'])) {
                 $payload['on'] ? $group->on() : $group->off();
             }
-            
+
             if (isset($payload['brightness'])) {
                 $group->setBrightness((int) $payload['brightness']);
             }
-            
+
             if (isset($payload['color'])) {
                 $group->setColor($payload['color']);
             }

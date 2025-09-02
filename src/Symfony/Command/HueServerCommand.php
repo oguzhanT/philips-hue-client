@@ -30,7 +30,7 @@ class HueServerCommand extends Command
             'Server port',
             8080
         );
-        
+
         $this->addOption(
             'host',
             'H',
@@ -43,7 +43,7 @@ class HueServerCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io = new SymfonyStyle($input, $output);
-        
+
         $port = $input->getOption('port');
         $host = $input->getOption('host');
 
@@ -55,16 +55,16 @@ class HueServerCommand extends Command
             }
 
             $io->title('🚀 Starting Hue REST API Server');
-            
+
             $io->definitionList(
                 ['Bridge' => $this->hueClient->getBridgeIp()],
                 ['Server' => "http://{$host}:{$port}"],
                 ['Documentation' => "http://{$host}:{$port}/docs"],
                 ['API Base' => "http://{$host}:{$port}/api"]
             );
-            
+
             $io->info('✅ Server running... Press Ctrl+C to stop');
-            
+
             // Set environment variables
             putenv("HUE_BRIDGE_IP={$this->hueClient->getBridgeIp()}");
             putenv("HUE_USERNAME={$this->hueClient->getUsername()}");
@@ -72,7 +72,7 @@ class HueServerCommand extends Command
             // Start built-in PHP server
             $publicPath = dirname(__DIR__, 3) . '/public';
             $router = $publicPath . '/api.php';
-            
+
             $command = "php -S {$host}:{$port} -t {$publicPath} {$router}";
             passthru($command);
 

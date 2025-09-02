@@ -36,7 +36,7 @@ class RetryHandler
         while ($attempt <= $this->maxRetries) {
             try {
                 $result = $operation();
-                
+
                 if ($attempt > 0) {
                     $this->logger->info("Operation succeeded after retry", [
                         'operation' => $operationName,
@@ -48,13 +48,13 @@ class RetryHandler
                 return $result;
             } catch (\Exception $exception) {
                 $lastException = $exception;
-                
+
                 if ($attempt >= $this->maxRetries || !$this->shouldRetry($exception)) {
                     break;
                 }
 
                 $delay = $this->retryDelays[$attempt] ?? end($this->retryDelays);
-                
+
                 $this->logger->warning("Operation failed, retrying", [
                     'operation' => $operationName,
                     'attempt' => $attempt + 1,
@@ -71,10 +71,10 @@ class RetryHandler
         $this->logger->error("Operation failed after all retries", [
             'operation' => $operationName,
             'total_attempts' => $attempt + 1,
-            'final_error' => $lastException->getMessage()
+            'final_error' => $lastException?->getMessage() ?? 'Unknown error'
         ]);
 
-        throw $lastException;
+        throw $lastException ?? new \Exception('Operation failed');
     }
 
     public function executeAsync(callable $operation, string $operationName = 'async_operation'): \Generator
@@ -82,7 +82,7 @@ class RetryHandler
         for ($attempt = 0; $attempt <= $this->maxRetries; $attempt++) {
             try {
                 $result = yield $operation();
-                
+
                 if ($attempt > 0) {
                     $this->logger->info("Async operation succeeded after retry", [
                         'operation' => $operationName,
@@ -102,7 +102,7 @@ class RetryHandler
                 }
 
                 $delay = $this->retryDelays[$attempt] ?? end($this->retryDelays);
-                
+
                 $this->logger->warning("Async operation failed, retrying", [
                     'operation' => $operationName,
                     'attempt' => $attempt + 1,

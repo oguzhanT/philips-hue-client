@@ -65,7 +65,7 @@ class CacheMiddleware implements MiddlewareInterface
             $cacheItem->set($body);
             $cacheItem->expiresAfter($cacheDuration);
             $this->cache->save($cacheItem);
-            
+
             $response = $response->withHeader('X-Cache', 'MISS')
                                 ->withHeader('Cache-Control', "public, max-age={$cacheDuration}");
         }
