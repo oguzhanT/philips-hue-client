@@ -2,8 +2,18 @@
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/oguzhanT/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhanT/philips-hue-client)
 [![Total Downloads](https://img.shields.io/packagist/dt/oguzhanT/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhanT/philips-hue-client)
+[![Monthly Downloads](https://img.shields.io/packagist/dm/oguzhanT/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhanT/philips-hue-client)
 [![PHP Version](https://img.shields.io/packagist/php-v/oguzhanT/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhanT/philips-hue-client)
 [![MIT Licensed](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
+[![GitHub Stars](https://img.shields.io/github/stars/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/network)
+[![GitHub Issues](https://img.shields.io/github/issues/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/pulls)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/oguzhanT/philips-hue-client/tests.yml?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/actions)
+[![Code Coverage](https://img.shields.io/codecov/c/github/oguzhanT/philips-hue-client?style=flat-square)](https://codecov.io/gh/oguzhanT/philips-hue-client)
+[![Maintainability](https://img.shields.io/codeclimate/maintainability/oguzhanT/philips-hue-client?style=flat-square)](https://codeclimate.com/github/oguzhanT/philips-hue-client)
+[![Latest Stable Version](https://poser.pugx.org/oguzhanT/philips-hue-client/v/stable?format=flat-square)](https://packagist.org/packages/oguzhanT/philips-hue-client)
+[![Composer Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen?style=flat-square)](https://packagist.org/packages/oguzhanT/philips-hue-client)
 
 A modern, fully-featured PHP client for Philips Hue smart lights. Control lights, rooms, scenes, and schedules with an elegant API. Framework-agnostic with built-in support for Laravel, Symfony, and standalone PHP applications.
 
@@ -811,6 +821,25 @@ Check the `/examples` directory for complete examples:
 - `weather-based-lighting.php` - 🌤️ Weather-responsive ambient lighting
 - `biometric-health-integration.php` - 💊 Health monitoring with biometric data
 - `smart-home-automation.php` - 🏠 Complete smart home automation hub
+
+## 🌟 Community Showcase
+
+**Built something awesome?** Share it with us!
+
+| Project | Description | Author |
+|---------|-------------|---------|
+| [Hue DJ Controller](link) | Sync lights with DJ mixer | @username |
+| [Smart Office Bot](link) | Slack bot for office lighting | @username |
+| [Gaming Immersion](link) | React to game events | @username |
+
+[➕ Add your project](https://github.com/oguzhanT/philips-hue-client/discussions/new?category=show-and-tell)
+
+## 💬 Join the Discussion
+
+- 🐛 [Report bugs](https://github.com/oguzhanT/philips-hue-client/issues/new?template=bug_report.md)
+- 💡 [Request features](https://github.com/oguzhanT/philips-hue-client/issues/new?template=feature_request.md)  
+- 💬 [General discussion](https://github.com/oguzhanT/philips-hue-client/discussions)
+- 🆘 [Get help](https://github.com/oguzhanT/philips-hue-client/discussions/categories/q-a)
 
 ## 🤝 Contributing
 
