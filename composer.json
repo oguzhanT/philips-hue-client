@@ -3,11 +3,11 @@
     "description": "A modern, fully-featured PHP client for Philips Hue smart lights",
     "type": "library",
     "license": "MIT",
-    "keywords": ["philips", "hue", "smart-lights", "iot", "home-automation", "php"],
+    "keywords": ["philips", "hue", "smart-lights", "cli", "api-client", "laravel", "symfony", "smart-lights", "iot", "home-automation", "php"],
     "authors": [
         {
             "name": "Oguzhan Togay",
-            "email": "oguzhan.togay@rgibilisim.com"
+            "email": "ogitog@gmail.com"
         }
     ],
     "require": {
