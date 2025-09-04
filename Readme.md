@@ -1,18 +1,18 @@
 # Philips Hue Client for PHP
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/oguzhanT/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
-[![Total Downloads](https://img.shields.io/packagist/dt/oguzhanT/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
-[![Monthly Downloads](https://img.shields.io/packagist/dm/oguzhanT/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
-[![PHP Version](https://img.shields.io/packagist/php-v/oguzhanT/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
+[![Total Downloads](https://img.shields.io/packagist/dt/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
+[![Monthly Downloads](https://img.shields.io/packagist/dm/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
+[![PHP Version](https://img.shields.io/packagist/php-v/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
 [![MIT Licensed](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
-[![GitHub Stars](https://img.shields.io/github/stars/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/network)
-[![GitHub Issues](https://img.shields.io/github/issues/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/issues)
-[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/pulls)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/oguzhanT/philips-hue-client/tests.yml?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/actions)
-[![Code Coverage](https://img.shields.io/codecov/c/github/oguzhanT/philips-hue-client?style=flat-square)](https://codecov.io/gh/oguzhanT/philips-hue-client)
-[![Maintainability](https://img.shields.io/codeclimate/maintainability/oguzhanT/philips-hue-client?style=flat-square)](https://codeclimate.com/github/oguzhanT/philips-hue-client)
-[![Latest Stable Version](https://poser.pugx.org/oguzhanT/philips-hue-client/v/stable?format=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
+[![GitHub Stars](https://img.shields.io/github/stars/oguzhantogay/philips-hue-client?style=flat-square)](https://github.com/oguzhantogay/philips-hue-client/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/oguzhantogay/philips-hue-client?style=flat-square)](https://github.com/oguzhantogay/philips-hue-client/network)
+[![GitHub Issues](https://img.shields.io/github/issues/oguzhantogay/philips-hue-client?style=flat-square)](https://github.com/oguzhantogay/philips-hue-client/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/oguzhantogay/philips-hue-client?style=flat-square)](https://github.com/oguzhantogay/philips-hue-client/pulls)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/oguzhantogay/philips-hue-client/tests.yml?style=flat-square)](https://github.com/oguzhantogay/philips-hue-client/actions)
+[![Code Coverage](https://img.shields.io/codecov/c/github/oguzhantogay/philips-hue-client?style=flat-square)](https://codecov.io/gh/oguzhantogay/philips-hue-client)
+[![Maintainability](https://img.shields.io/codeclimate/maintainability/oguzhantogay/philips-hue-client?style=flat-square)](https://codeclimate.com/github/oguzhantogay/philips-hue-client)
+[![Latest Stable Version](https://poser.pugx.org/oguzhantogay/philips-hue-client/v/stable?format=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
 [![Composer Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
 
 A modern, fully-featured PHP client for Philips Hue smart lights. Control lights, rooms, scenes, and schedules with an elegant API. Framework-agnostic with built-in support for Laravel, Symfony, and standalone PHP applications.
@@ -49,7 +49,7 @@ A modern, fully-featured PHP client for Philips Hue smart lights. Control lights
 Install via Composer:
 
 ```bash
-composer require oguzhant/philips-hue-client
+composer require oguzhantogay/philips-hue-client
 ```
 
 ## 🔧 Quick Start
@@ -230,7 +230,7 @@ The package includes a powerful CLI tool:
 
 ```bash
 # Install globally
-composer global require oguzhant/philips-hue-client
+composer global require oguzhantogay/philips-hue-client
 
 # Discover bridges
 hue discover
@@ -372,7 +372,7 @@ CACHE_TTL=300
 
 ```bash
 # Install the package
-composer require oguzhant/philips-hue-client
+composer require oguzhantogay/philips-hue-client
 
 # Publish configuration
 php artisan vendor:publish --tag=hue-config
@@ -519,7 +519,7 @@ php artisan cache:clear --tags=hue
 
 ```bash
 # Install the package
-composer require oguzhant/philips-hue-client
+composer require oguzhantogay/philips-hue-client
 
 # Discover bridges
 bin/console hue:discover
@@ -707,7 +707,7 @@ $hue = new \OguzhanTogay\HueClient\HueClient(
 
 ```bash
 # Clone the repository
-git clone https://github.com/oguzhanT/philips-hue-client.git
+git clone https://github.com/oguzhantogay/philips-hue-client.git
 cd philips-hue-client
 
 # Copy environment file
@@ -738,7 +738,7 @@ docker-compose exec dev sh
 
 ### One-Click Development
 
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/oguzhanT/philips-hue-client)
+[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/oguzhantogay/philips-hue-client)
 
 [![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=your-repo-id)
 
@@ -832,14 +832,14 @@ Check the `/examples` directory for complete examples:
 | [Smart Office Bot](link) | Slack bot for office lighting | @username |
 | [Gaming Immersion](link) | React to game events | @username |
 
-[➕ Add your project](https://github.com/oguzhanT/philips-hue-client/discussions/new?category=show-and-tell)
+[➕ Add your project](https://github.com/oguzhantogay/philips-hue-client/discussions/new?category=show-and-tell)
 
 ## 💬 Join the Discussion
 
-- 🐛 [Report bugs](https://github.com/oguzhanT/philips-hue-client/issues/new?template=bug_report.md)
-- 💡 [Request features](https://github.com/oguzhanT/philips-hue-client/issues/new?template=feature_request.md)  
-- 💬 [General discussion](https://github.com/oguzhanT/philips-hue-client/discussions)
-- 🆘 [Get help](https://github.com/oguzhanT/philips-hue-client/discussions/categories/q-a)
+- 🐛 [Report bugs](https://github.com/oguzhantogay/philips-hue-client/issues/new?template=bug_report.md)
+- 💡 [Request features](https://github.com/oguzhantogay/philips-hue-client/issues/new?template=feature_request.md)  
+- 💬 [General discussion](https://github.com/oguzhantogay/philips-hue-client/discussions)
+- 🆘 [Get help](https://github.com/oguzhantogay/philips-hue-client/discussions/categories/q-a)
 
 ## 🤝 Contributing
 
@@ -852,7 +852,7 @@ The MIT License (MIT). Please see [License File](LICENSE.md) for more informatio
 ## 🔗 Links
 
 - [Philips Hue API Documentation](https://developers.meethue.com/)
-- [Report Issues](https://github.com/oguzhanT/philips-hue-client/issues)
+- [Report Issues](https://github.com/oguzhantogay/philips-hue-client/issues)
 - [Packagist](https://packagist.org/packages/oguzhantogay/philips-hue-client)
 
 ## 💖 Support
