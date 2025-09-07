@@ -25,7 +25,7 @@ class HueCommand extends Command
 
     public function __construct()
     {
-        parent::__construct();
+        parent::__construct('hue:command');
         $this->configFile = $_SERVER['HOME'] . '/.hue-config.json';
         $this->loadConfig();
     }
