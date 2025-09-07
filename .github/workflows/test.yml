@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        php-version: [8.0]
+        php-version: [8.2]
 
     steps:
     - uses: actions/checkout@v4
@@ -48,11 +48,11 @@ jobs:
       run: composer test
 
     - name: Generate test coverage
-      if: matrix.php-version == '8.0'
+      if: matrix.php-version == '8.2'
       run: composer test-coverage
 
     - name: Upload coverage to Codecov
-      if: matrix.php-version == '8.0'
+      if: matrix.php-version == '8.2'
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/clover.xml
