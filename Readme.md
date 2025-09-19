@@ -733,12 +733,6 @@ docker-compose exec dev composer test
 docker-compose exec dev sh
 ```
 
-### One-Click Development
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/oguzhanT/philips-hue-client)
-
-[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://github.com/codespaces/new?hide_repo_select=true&ref=main&repo=your-repo-id)
-
 ## 🧪 Testing
 
 ```bash
