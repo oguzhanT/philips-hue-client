@@ -702,6 +702,8 @@ $hue = new \OguzhanTogay\HueClient\HueClient(
 
 [`macos/HueBar`](macos/HueBar) is a small SwiftUI menu bar app: switch lights and rooms, set brightness and color, and pause or retarget the [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) notifier. Build it with `macos/HueBar/build-app.sh --install`. It is not part of the Composer package.
 
+<img src="macos/HueBar/docs/huebar.png" alt="HueBar menu bar app" width="356">
+
 ## 🐳 Docker Development
 
 ### Quick Start with Docker
