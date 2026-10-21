@@ -510,9 +510,11 @@ class HueCommand extends Command
 
         // bin/hue-server does the checks (API key, bridge reachable) and starts
         // PHP's built-in server; HUE_API_KEY, HUE_PORT, HUE_BIND and friends
-        // are read from the environment.
-        $command = [PHP_BINARY, __DIR__ . '/../../bin/hue-server', '-h', $bridgeIp, '-u', $username];
-        $process = proc_open($command, [STDIN, STDOUT, STDERR], $pipes);
+        // are read from the environment. The username goes through the
+        // environment too: arguments are visible to every user in `ps`.
+        $env = array_merge(getenv(), ['HUE_BRIDGE_IP' => $bridgeIp, 'HUE_USERNAME' => $username]);
+        $command = [PHP_BINARY, __DIR__ . '/../../bin/hue-server'];
+        $process = proc_open($command, [STDIN, STDOUT, STDERR], $pipes, null, $env);
 
         return $process !== false && proc_close($process) === 0 ? Command::SUCCESS : Command::FAILURE;
     }

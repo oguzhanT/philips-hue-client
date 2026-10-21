@@ -7,7 +7,10 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\Cache\Adapter\FilesystemAdapter;
+use Symfony\Component\RateLimiter\Storage\CacheStorage;
 use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\RateLimiter\Storage\StorageInterface;
 
 class RateLimitMiddleware implements MiddlewareInterface
 {
@@ -20,7 +23,20 @@ class RateLimitMiddleware implements MiddlewareInterface
             'policy' => 'sliding_window',
             'limit' => 100,
             'interval' => '1 minute',
-        ], new InMemoryStorage());
+        ], self::storage());
+    }
+
+    /**
+     * PHP's built-in server rebuilds every object per request, so in-memory
+     * counts would reset each time; keep them in the cache when it exists.
+     */
+    private static function storage(): StorageInterface
+    {
+        if (class_exists(FilesystemAdapter::class)) {
+            return new CacheStorage(new FilesystemAdapter('hue_rate_limit'));
+        }
+
+        return new InMemoryStorage();
     }
 
     public function process(Request $request, RequestHandlerInterface $handler): Response

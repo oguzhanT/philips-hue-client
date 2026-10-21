@@ -245,11 +245,12 @@ The package includes a REST API over the client. Every request needs an API key,
 ### Quick Start
 
 ```bash
-# Pick a key once and give it to your clients
-export HUE_API_KEY=$(openssl rand -hex 24)
+# Pick a key once and give it to your clients. Pass secrets through the
+# environment: command-line options are visible to every user in `ps`.
+export HUE_API_KEY=$(openssl rand -hex 24) HUE_USERNAME=your-username
 
 # Listens on 127.0.0.1:8080 by default; add --bind 0.0.0.0 to serve your network
-./vendor/bin/hue-server -h 192.168.1.100 -u your-username
+./vendor/bin/hue-server -h 192.168.1.100
 
 # Or, with the bridge already set up through `hue setup`
 hue server
@@ -812,7 +813,8 @@ $lights = $client->lights()->getAll(); // Cached for 10 seconds
 
 ### Rate Limiting
 With `symfony/rate-limiter` installed, the REST API rate limits requests to protect your bridge:
-- **Limit**: 100 requests per minute per client address (`REMOTE_ADDR`; forwarding headers are ignored because clients can forge them)
+- **Limit**: 100 requests per minute per client address (`REMOTE_ADDR`; forwarding headers are ignored because clients can forge them), counted before the API key check so key guessing is slowed too
+- **Storage**: the counts persist across requests only with `symfony/cache` installed; PHP's built-in server forgets in-memory counts after each request
 - **Headers**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`
 - **Error**: HTTP 429 when exceeded
 

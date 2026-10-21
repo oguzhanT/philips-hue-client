@@ -37,10 +37,10 @@ if (isset($options['help'])) {
 
     Options:
       -h, --host       Bridge IP address              (HUE_BRIDGE_IP)
-      -u, --username   Bridge username / app key      (HUE_USERNAME)
+      -u, --username   Bridge username / app key      (HUE_USERNAME; prefer the variable)
       -p, --port       Port to listen on, default 8080 (HUE_PORT)
       -b, --bind       Address to listen on, default 127.0.0.1 (HUE_BIND)
-      -k, --api-key    Key clients must send          (HUE_API_KEY)
+      -k, --api-key    Key clients must send          (HUE_API_KEY; prefer the variable)
           --insecure   Run without an API key — trusted networks only (HUE_API_INSECURE=1)
           --cors       Comma-separated browser origins allowed to call the API (HUE_CORS_ORIGINS)
       -d, --discover   Find the bridge through Philips' discovery service
@@ -49,9 +49,13 @@ if (isset($options['help'])) {
     Clients send the key as "Authorization: Bearer <key>" or "X-API-Key: <key>".
     /api/health and /docs need no key.
 
+    Secrets passed as options are visible to every user on this machine (ps),
+    so pass the username and API key through the environment.
+
     Examples:
-      hue-server -h 192.168.1.100 -u <username> -k "\$(openssl rand -hex 24)"
-      HUE_BRIDGE_IP=192.168.1.100 HUE_USERNAME=<username> HUE_API_KEY=<key> hue-server --bind 0.0.0.0
+      export HUE_USERNAME=<username> HUE_API_KEY="\$(openssl rand -hex 24)"
+      hue-server -h 192.168.1.100
+      HUE_BRIDGE_IP=192.168.1.100 hue-server --bind 0.0.0.0
 
     HELP;
     exit(0);

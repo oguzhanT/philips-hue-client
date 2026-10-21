@@ -92,20 +92,22 @@ class RestApi
     private function setupMiddleware(): void
     {
         // Slim runs middleware last-added first, so this list goes from the
-        // route outwards: routing, cache, rate limit, JSON check, auth, CORS,
-        // errors. Routing sits innermost so CORS can answer preflights for any path.
+        // route outwards: routing, cache, JSON check, auth, rate limit, CORS,
+        // errors. Routing sits innermost so CORS can answer preflights for any
+        // path; the rate limit sits outside auth so it also slows key guessing.
         $this->app->addRoutingMiddleware();
 
         if (class_exists('\Symfony\Component\Cache\Adapter\FilesystemAdapter')) {
             $this->app->add(new CacheMiddleware());
         }
 
+        $this->app->add(new JsonBodyMiddleware());
+        $this->app->add(new ApiKeyMiddleware($this->options['api_key'], (bool) $this->options['allow_insecure']));
+
         if (class_exists('\Symfony\Component\RateLimiter\RateLimiterFactory')) {
             $this->app->add(new RateLimitMiddleware());
         }
 
-        $this->app->add(new JsonBodyMiddleware());
-        $this->app->add(new ApiKeyMiddleware($this->options['api_key'], (bool) $this->options['allow_insecure']));
         $this->app->add(new CorsMiddleware($this->options['cors_origins']));
         $this->app->addErrorMiddleware((bool) $this->options['debug'], true, true);
     }
@@ -159,7 +161,11 @@ class RestApi
         $this->app->get('/api/sensors/{id}', [$sensorsController, 'get']);
         $this->app->put('/api/sensors/{id}/state', [$sensorsController, 'setState']);
 
-        // Swagger documentation
+        // Swagger documentation, when zircote/swagger-php is installed
+        if (!class_exists(\OpenApi\Generator::class)) {
+            return;
+        }
+
         $this->app->get('/api/docs', function (Request $request, Response $response) {
             $swaggerJson = $this->generateSwaggerJson();
             $response->getBody()->write($swaggerJson);

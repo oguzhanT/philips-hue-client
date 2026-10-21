@@ -18,7 +18,14 @@ class JsonBodyMiddleware implements MiddlewareInterface
     {
         if (in_array($request->getMethod(), ['POST', 'PUT', 'PATCH'], true)) {
             $type = strtolower(trim(explode(';', $request->getHeaderLine('Content-Type'))[0]));
-            $hasBody = $request->getBody()->getSize() !== 0;
+
+            // Read it: a php://input stream reports no size, so getSize()
+            // cannot tell an empty body from a full one.
+            $body = $request->getBody();
+            $hasBody = trim((string) $body) !== '';
+            if ($body->isSeekable()) {
+                $body->rewind();
+            }
 
             if ($hasBody && $type !== 'application/json') {
                 $response = new \Slim\Psr7\Response(415);

@@ -21,7 +21,9 @@ function hue_fail(string $message, int $status = 503): void
 
 $bridgeIp = getenv('HUE_BRIDGE_IP') ?: null;
 $username = getenv('HUE_USERNAME') ?: null;
-$autoDiscover = filter_var(getenv('HUE_AUTO_DISCOVER') ?: 'true', FILTER_VALIDATE_BOOLEAN);
+// Off by default: PHP's built-in server runs this file per request, and
+// Philips rate limits its discovery service.
+$autoDiscover = filter_var(getenv('HUE_AUTO_DISCOVER') ?: 'false', FILTER_VALIDATE_BOOLEAN);
 
 if (!$bridgeIp && $autoDiscover) {
     $bridges = (new BridgeDiscovery())->discover();
@@ -29,7 +31,7 @@ if (!$bridgeIp && $autoDiscover) {
 }
 
 if (!$bridgeIp) {
-    hue_fail('Bridge IP not configured. Set HUE_BRIDGE_IP.');
+    hue_fail('Bridge IP not configured. Set HUE_BRIDGE_IP (or HUE_AUTO_DISCOVER=1).');
 }
 
 if (!$username) {

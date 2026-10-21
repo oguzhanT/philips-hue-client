@@ -99,6 +99,18 @@ class SecurityTest extends TestCase
         $this->assertSame(415, $response->getStatusCode());
     }
 
+    public function testBodylessWritesNeedNoContentType(): void
+    {
+        $this->client->shouldReceive('scenes->activate')->with('abc')->andReturnNull();
+        $api = new RestApi($this->client, ['api_key' => 'right']);
+
+        // Like php://input under PHP's built-in server: empty, size unknown.
+        $body = new \GuzzleHttp\Psr7\PumpStream(static fn () => false);
+        $request = new Request('PUT', new Uri('http', 'localhost', 8080, '/api/scenes/abc/activate'), new Headers(['Authorization' => 'Bearer right']), [], ['REMOTE_ADDR' => '127.0.0.1'], $body);
+
+        $this->assertNotSame(415, $api->getApp()->handle($request)->getStatusCode());
+    }
+
     public function testOptionsFromEnvironment(): void
     {
         putenv('HUE_API_KEY=k');

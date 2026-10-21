@@ -4,9 +4,8 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - HUE_BRIDGE_IP=${HUE_BRIDGE_IP}
-      - HUE_USERNAME=${HUE_USERNAME}
-      - HUE_AUTO_DISCOVER=true
+      - HUE_BRIDGE_IP=${HUE_BRIDGE_IP:?Set HUE_BRIDGE_IP}
+      - HUE_USERNAME=${HUE_USERNAME:?Set HUE_USERNAME}
       # Clients send it as "Authorization: Bearer <key>". Generate one with: openssl rand -hex 24
       - HUE_API_KEY=${HUE_API_KEY:?Set HUE_API_KEY}
       - HUE_CORS_ORIGINS=${HUE_CORS_ORIGINS:-}
