@@ -13,6 +13,7 @@ use OguzhanTogay\HueClient\Resources\Schedules;
 use OguzhanTogay\HueClient\Resources\Events;
 use OguzhanTogay\HueClient\Resources\Sensors;
 use OguzhanTogay\HueClient\Retry\RetryHandler;
+use OguzhanTogay\HueClient\Signal\Signaler;
 use OguzhanTogay\HueClient\Cache\HueCache;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -33,6 +34,7 @@ class HueClient
     private ?Schedules $schedules = null;
     private ?Events $events = null;
     private ?Sensors $sensors = null;
+    private ?Signaler $signaler = null;
 
     public function __construct(
         string $bridgeIp,
@@ -115,17 +117,24 @@ class HueClient
         }
     }
 
+    /**
+     * @param array $options Guzzle request options, plus 'cache' => false to
+     *                       skip the read cache for this request
+     */
     public function request(string $method, string $endpoint, array $options = []): array
     {
         if (!$this->username) {
             throw new AuthenticationException('No username set. Please register first.');
         }
 
+        $useCache = $options['cache'] ?? true;
+        unset($options['cache']);
+
         $uri = "{$this->username}/{$endpoint}";
         $cacheKey = $method . '_' . $uri . '_' . md5(serialize($options));
 
         // Try cache for GET requests
-        if ($method === 'GET' && $this->cache) {
+        if ($method === 'GET' && $this->cache && $useCache) {
             $cachedData = $this->cache->get('api', $cacheKey);
             if ($cachedData !== null) {
                 return $cachedData;
@@ -220,6 +229,18 @@ class HueClient
             $this->schedules = new Schedules($this);
         }
         return $this->schedules;
+    }
+
+    /**
+     * Developer-notification states (attention, success, error, ...) on the
+     * notifier's lamps or the lights you name. See docs/signals.md.
+     */
+    public function signal(): Signaler
+    {
+        if ($this->signaler === null) {
+            $this->signaler = new Signaler($this);
+        }
+        return $this->signaler;
     }
 
     public function events(): Events

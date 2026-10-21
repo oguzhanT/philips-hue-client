@@ -204,6 +204,49 @@ $client->schedules()->once('New Year', $command, '2026-12-31 23:00:00');
 $client->schedules()->atSunset($command);
 ```
 
+### Signals: lamps as developer notifications
+
+Show a build, deploy or agent state on a lamp. The colors, the lamps and the pause switch are shared with [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) and [HueBar](#-macos-menu-bar-app); see [docs/signals.md](docs/signals.md).
+
+```php
+$client->signal()->send('success');                        // the notifier's lamps (light_ids)
+$client->signal()->send('error', ['Desk', 3]);             // lights by name or id
+$client->signal()->send('attention', 'Desk', restoreAfter: 10); // put the lamp back after 10 s
+
+$client->signal()->pause(3600);   // quiet for an hour (claude-hue-notify too)
+$client->signal()->resume();
+```
+
+Signals: `attention` (blue, blinking), `success` (green), `error` (red), `warning` (amber), `working` (dim blue), `off`. `send()` returns `false` and changes nothing while paused. `restoreAfter` waits in the foreground.
+
+#### Laravel notifications
+
+```php
+use OguzhanTogay\HueClient\Laravel\Notifications\HueChannel;
+use OguzhanTogay\HueClient\Laravel\Notifications\HueMessage;
+
+class DeployFailed extends Notification implements ShouldQueue
+{
+    public function via($notifiable): array
+    {
+        return [HueChannel::class];
+    }
+
+    public function toHue($notifiable): HueMessage
+    {
+        return HueMessage::error()->lights('Desk')->restoreAfter(30);
+    }
+}
+
+// Lights default to the notifiable's route, then to the notifier's lamps:
+public function routeNotificationForHue($notification): array
+{
+    return ['Desk'];
+}
+```
+
+Queue notifications that use `restoreAfter()`: it waits before restoring.
+
 ## 🛠️ CLI Usage
 
 The package includes a powerful CLI tool:
@@ -231,6 +274,12 @@ hue color --all -c "#FF5733"     # Set color for all
 # Scenes
 hue scenes                       # List scenes
 hue scene activate               # Asks for the scene name
+
+# Signals (see docs/signals.md)
+hue signal success                    # notifier lamps
+hue signal error --light=Desk --light=3 --restore=10
+hue pause 60                          # minutes; no argument = until resume
+hue resume
 
 # Effects (they run in the foreground for --duration seconds)
 hue effect party --duration=30
@@ -717,8 +766,7 @@ What the library does not do yet, so you are not surprised:
 
 Planned, roughly in this order:
 
-1. A `signal` API (`$hue->signal('success')`, `hue signal error`) for developer notifications, and a Laravel notification channel
-2. CLIP v2 with event stream and mDNS discovery (2.0)
+1. CLIP v2 with event stream and mDNS discovery (2.0)
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
