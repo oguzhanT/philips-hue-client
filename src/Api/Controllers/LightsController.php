@@ -165,7 +165,10 @@ class LightsController extends BaseController
             if (isset($payload['hue']) || isset($payload['saturation'])) {
                 $hue = $payload['hue'] ?? $light->getState()->getHue();
                 $sat = $payload['saturation'] ?? $light->getState()->getSaturation();
-                $light->setHueSaturation($hue, $sat);
+                $light->setState([
+                    'hue' => max(0, min(65535, (int) $hue)),
+                    'sat' => max(0, min(254, (int) $sat)),
+                ]);
             }
 
             if (isset($payload['transitiontime'])) {

@@ -16,8 +16,6 @@ abstract class BaseEffect
         $this->client = $client;
     }
 
-    abstract public function start($target, ...$args): void;
-
     public function stop(): void
     {
         $this->running = false;

@@ -33,12 +33,17 @@ class Alert extends BaseEffect
         ]);
     }
 
-    public function stop($target): void
+    /**
+     * Stops the effect and, when a target is given, cancels its running alert.
+     */
+    public function stop($target = null): void
     {
         parent::stop();
 
-        $this->setLightState($target, [
-            'alert' => 'none'
-        ]);
+        if ($target !== null) {
+            $this->setLightState($target, [
+                'alert' => 'none'
+            ]);
+        }
     }
 }
