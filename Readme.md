@@ -417,7 +417,9 @@ The REST server can turn GitHub and Sentry webhooks into [signals](#signals-lamp
 
 - `HUE_WEBHOOK_LIGHTS`: lamps to light, comma separated names or ids (default: the notifier's lamps).
 - `HUE_GITHUB_BRANCHES`: only these branches, e.g. `main` (default: all).
-- In GitHub, set the content type to `application/json`.
+- In GitHub, set the content type to `application/json`; form-encoded deliveries are refused with 415.
+- Workflow runs from forks are ignored, even on a branch called `main`.
+- A captured delivery can be replayed; at worst it changes a lamp's color.
 - The bridge is on your LAN and GitHub and Sentry are on the internet, so expose only `/hooks/` through a tunnel (Cloudflare Tunnel, ngrok, Tailscale Funnel).
 
 ### Example API Usage
@@ -906,7 +908,9 @@ $client = new HueClient($bridgeIp, $username, ['pinned_public_key' => $certifica
 $client->v2();   // inherits the pin
 ```
 
-`hue setup` pins automatically; `hue pin` adds a pin to a setup made before 2.1.
+`hue setup` pins automatically and refuses a certificate that is not for the bridge it discovered; `hue pin` adds a pin to a setup made before 2.1 (it shows the certificate's bridge id for you to check, it does not compare it). The pin also covers `$hue->events()`: the event stream is tied to the pinned certificate before any header is sent. For Laravel, set `HUE_PINNED_PUBLIC_KEY`.
+
+> Pair and pin on a network you trust. Discovery answers are not authenticated, so a device that answers in place of your bridge during that first step can present its own certificate with your bridge's id.
 
 ### Caching & Retry
 

@@ -23,6 +23,8 @@ return [
                 'retry_attempts' => env('HUE_RETRY_ATTEMPTS', 3),
                 'cache_enabled' => env('HUE_CACHE_ENABLED', true),
                 'cache_type' => env('HUE_CACHE_TYPE', 'file'),
+                // `php vendor/bin/hue pin` prints it; see README "Pinning the bridge certificate"
+                'pinned_public_key' => env('HUE_PINNED_PUBLIC_KEY'),
             ]
         ],
 

@@ -6,6 +6,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use OguzhanTogay\HueClient\Exceptions\HueException;
+use OguzhanTogay\HueClient\Security\BridgeCertificate;
 use OguzhanTogay\HueClient\V2\Resources\Device;
 use OguzhanTogay\HueClient\V2\Resources\GroupedLight;
 use OguzhanTogay\HueClient\V2\Resources\Light;
@@ -103,9 +104,33 @@ class HueV2Client
         return $this->collection($type, Resource::class);
     }
 
+    /**
+     * With a pinned key, the certificate is checked before the stream opens:
+     * Guzzle streams through PHP's stream wrapper, which ignores curl's pin,
+     * so the connection is tied to the pinned certificate's fingerprint instead.
+     */
     public function events(): EventStream
     {
-        return new EventStream($this->http, $this->applicationKey, fn (string $m): string => $this->redact($m));
+        $fingerprint = null;
+        $pin = $this->options['pinned_public_key'] ?? null;
+
+        if ($pin !== null && $pin !== '') {
+            [$host, $port] = array_pad(explode(':', $this->bridgeIp, 2), 2, '443');
+            $certificate = BridgeCertificate::fetch($host, (int) $port);
+            if (!hash_equals($pin, $certificate->pin)) {
+                throw new HueException(
+                    "The bridge at {$this->bridgeIp} presented a different key than the pinned one."
+                );
+            }
+            $fingerprint = $certificate->fingerprint;
+        }
+
+        return new EventStream(
+            $this->http,
+            $this->applicationKey,
+            fn (string $m): string => $this->redact($m),
+            $fingerprint
+        );
     }
 
     /**

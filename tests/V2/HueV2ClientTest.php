@@ -135,6 +135,20 @@ class HueV2ClientTest extends TestCase
         $this->assertSame('/eventstream/clip/v2', $this->history[0]['request']->getUri()->getPath());
     }
 
+    public function testEventStreamTiesTheConnectionToAFingerprint(): void
+    {
+        $stack = HandlerStack::create(new MockHandler([new Response(200, [], '')]));
+        $stack->push(Middleware::history($this->history));
+        $http = new Client(['handler' => $stack, 'base_uri' => 'https://192.168.1.2/']);
+
+        (new \OguzhanTogay\HueClient\V2\EventStream($http, 'KEY', fn ($m) => $m, 'ab12'))->listen(fn () => true);
+
+        $this->assertSame(
+            ['ssl' => ['peer_fingerprint' => ['sha256' => 'ab12']]],
+            $this->history[0]['options']['stream_context']
+        );
+    }
+
     public function testEventStreamReportsALostConnection(): void
     {
         // A connection that stays open but never sends anything again.

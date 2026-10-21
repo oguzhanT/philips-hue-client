@@ -39,6 +39,12 @@ class WebhookTest extends TestCase
         $this->assertNull(WebhookSignals::github('workflow_run', $run('completed', 'failure', 'feature/x'), ['main']));
         $this->assertSame(SignalType::Error, WebhookSignals::github('deployment_status', ['deployment_status' => ['state' => 'failure']]));
         $this->assertNull(WebhookSignals::github('push', []));
+
+        $fromFork = $run('completed', 'failure') + ['repository' => ['full_name' => 'me/app']];
+        $fromFork['workflow_run']['head_repository'] = ['full_name' => 'stranger/app'];
+        $this->assertNull(WebhookSignals::github('workflow_run', $fromFork), 'forks are ignored');
+        $fromFork['workflow_run']['head_repository'] = ['full_name' => 'me/app'];
+        $this->assertSame(SignalType::Error, WebhookSignals::github('workflow_run', $fromFork));
     }
 
     public function testSentryMapping(): void

@@ -26,6 +26,14 @@ final class WebhookSignals
             return null;
         }
 
+        // A run triggered from a fork can carry a branch called main too; only
+        // runs of this repository's own branches count.
+        $headRepository = $payload['workflow_run']['head_repository']['full_name'] ?? null;
+        $repository = $payload['repository']['full_name'] ?? null;
+        if ($headRepository !== null && $repository !== null && $headRepository !== $repository) {
+            return null;
+        }
+
         $action = $payload['action'] ?? null;
 
         return match ($event) {

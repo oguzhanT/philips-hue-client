@@ -25,7 +25,9 @@ final class BridgeCertificate
         public readonly string $commonName,
         public readonly string $issuer,
         /** sha256//<base64 SPKI hash>, the format curl's CURLOPT_PINNEDPUBLICKEY takes. */
-        public readonly string $pin
+        public readonly string $pin,
+        /** SHA-256 of the whole certificate, hex: what PHP's ssl peer_fingerprint checks. */
+        public readonly string $fingerprint
     ) {
     }
 
@@ -72,7 +74,8 @@ final class BridgeCertificate
         return new self(
             strtolower((string) ($info['subject']['CN'] ?? '')),
             (string) ($info['issuer']['CN'] ?? ''),
-            'sha256//' . base64_encode(hash('sha256', $der, true))
+            'sha256//' . base64_encode(hash('sha256', $der, true)),
+            (string) openssl_x509_fingerprint($certificate, 'sha256')
         );
     }
 
