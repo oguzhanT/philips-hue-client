@@ -196,13 +196,16 @@ class HueCommand extends Command
         try {
             $username = $client->register('hue-cli', gethostname());
 
-            // Save config
-            $this->config = [
+            // A different bridge than before: its lamp ids mean nothing on this one.
+            $sameBridge = ($this->config['pinned_public_key'] ?? null) === $certificate->pin
+                || strtolower((string) ($this->config['bridge_id'] ?? '')) === strtolower($bridge->getId());
+            $changes = [
                 'bridge_ip' => $bridge->getIp(),
+                'bridge_id' => strtolower($bridge->getId()),
                 'username' => $username,
                 'pinned_public_key' => $certificate->pin,
             ];
-            $this->saveConfig();
+            $this->saveConfig($changes, $sameBridge ? [] : ['light_id', 'light_ids', 'project_lights']);
 
             $output->writeln("<info>Successfully connected to bridge!</info>");
             $output->writeln("Username: {$username}");
@@ -517,20 +520,28 @@ class HueCommand extends Command
     }
 
     /**
-     * Merges into the shared file so keys other tools own (light_ids,
-     * project_lights, ...) survive, and writes it owner-only and atomically.
+     * Writes only $changes into the shared file, re-read just before, so keys
+     * other tools own (light_ids, project_lights, ...) and their concurrent
+     * edits survive; owner-only and atomic.
+     *
+     * @param array    $changes keys to set ('username' is stored as 'token')
+     * @param string[] $remove  keys to drop
      */
-    private function saveConfig(): void
+    private function saveConfig(array $changes, array $remove = []): void
     {
+        // A config only in the legacy file is carried over on this first save.
         $existing = file_exists($this->configFile)
             ? (json_decode((string) file_get_contents($this->configFile), true) ?? [])
-            : [];
+            : $this->config;
+        unset($existing['username']);
 
-        $data = array_merge($existing, $this->config);
-        if (isset($data['username'])) {
-            $data['token'] = $data['username'];
-            unset($data['username']);
+        if (array_key_exists('username', $changes)) {
+            $changes['token'] = $changes['username'];
+            unset($changes['username']);
         }
+
+        $data = array_diff_key(array_merge($existing, $changes), array_flip($remove));
+        $this->config = $data + (isset($data['token']) ? ['username' => $data['token']] : []);
 
         $directory = dirname($this->configFile);
         if (!is_dir($directory)) {
@@ -718,8 +729,7 @@ class HueCommand extends Command
             return Command::FAILURE;
         }
 
-        $this->config['pinned_public_key'] = $certificate->pin;
-        $this->saveConfig();
+        $this->saveConfig(['pinned_public_key' => $certificate->pin]);
         $output->writeln('<info>Pinned. Requests to any other key will be refused.</info>');
 
         return Command::SUCCESS;
