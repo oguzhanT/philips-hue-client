@@ -23,6 +23,8 @@ A lamp without color (white or white-ambiance) gets only `on`, `bri` and `alert`
 
 A sender that restores the previous state saves it as `signal-restore-<light id>.json` next to the config file and deletes it after restoring. A signal that starts while such a file exists (and is less than ten minutes old) keeps the saved state instead of capturing the first signal's colors, so overlapping signals still end on the lamp's real state.
 
+Known limit: a sender that does not restore (claude-hue-notify today) does not know about these files. If it changes a lamp while another sender is waiting to restore, the restore wins and its change is undone.
+
 ## Configuration file
 
 `~/.config/hue-notify/config.json` (override the path with `HUE_NOTIFY_CONFIG`; a leading `~/` is expanded):
