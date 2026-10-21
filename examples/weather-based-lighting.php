@@ -7,6 +7,9 @@ use OguzhanTogay\HueClient\Discovery\BridgeDiscovery;
 
 /**
  * 🌤️ Weather-Based Ambient Lighting System
+ *
+ * Requires ReactPHP, which the library itself no longer pulls in:
+ *   composer require react/event-loop react/socket
  * 
  * This example creates dynamic lighting that responds to real weather conditions,
  * forecasts, and seasonal changes to bring the outdoors inside.

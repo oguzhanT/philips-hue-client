@@ -162,13 +162,17 @@ class LightsController extends BaseController
                 $light->setBrightness((int) ($payload['brightness'] / 254 * 100));
             }
 
-            if (isset($payload['hue']) || isset($payload['saturation'])) {
-                $hue = $payload['hue'] ?? $light->getState()->getHue();
-                $sat = $payload['saturation'] ?? $light->getState()->getSaturation();
-                $light->setState([
-                    'hue' => max(0, min(65535, (int) $hue)),
-                    'sat' => max(0, min(254, (int) $sat)),
-                ]);
+            // Send only what was given: filling the other from the current state
+            // would push hue 0 (red) to a light that has no hue yet.
+            $color = [];
+            if (isset($payload['hue'])) {
+                $color['hue'] = max(0, min(65535, (int) $payload['hue']));
+            }
+            if (isset($payload['saturation'])) {
+                $color['sat'] = max(0, min(254, (int) $payload['saturation']));
+            }
+            if ($color !== []) {
+                $light->setState($color);
             }
 
             if (isset($payload['transitiontime'])) {
