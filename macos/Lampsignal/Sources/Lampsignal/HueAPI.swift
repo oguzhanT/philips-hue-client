@@ -12,7 +12,7 @@ enum HueError: LocalizedError {
 }
 
 /// The `sha256//<base64>` pin of a certificate's SubjectPublicKeyInfo, the same
-/// value curl, the PHP library and claude-hue-notify use (`pinned_public_key`).
+/// value curl, the PHP library and the Lampsignal plugin use (`pinned_public_key`).
 /// A renewed certificate with the same key keeps the same pin.
 enum PublicKeyPin {
     static func of(certificateDER der: [UInt8]) -> String? {
@@ -45,7 +45,7 @@ enum PublicKeyPin {
 }
 
 /// Accepts the bridge's certificate only if its public key matches the pin
-/// (`pinned_public_key`, shared with claude-hue-notify and the PHP library, see
+/// (`pinned_public_key`, shared with the Lampsignal plugin and the PHP library, see
 /// docs/signals.md). The bridge's certificate comes from Philips' own CA, which
 /// macOS does not trust, so the pin is the check. With no pin yet, the first
 /// key seen is accepted and reported back to be saved: trust on first use.
@@ -110,7 +110,7 @@ struct HueAPI {
     }
 
     private func send(_ request: URLRequest) async throws -> Data {
-        // Another process (claude-hue-notify) may have pinned since this config was loaded.
+        // Another process (the Lampsignal plugin) may have pinned since this config was loaded.
         let expected = pin ?? NotifierFiles.loadConfig()["pinned_public_key"] as? String
         let pinning = BridgePinning(expected: expected)
         let data = try await pinning.data(for: request)
@@ -186,7 +186,7 @@ struct HueAPI {
     }
 }
 
-/// Shared with claude-hue-notify: ~/.config/hue-notify/{config.json,paused}
+/// Shared with the Lampsignal plugin: ~/.config/hue-notify/{config.json,paused}
 enum NotifierFiles {
     static let directory = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent(".config/hue-notify")
     static let config = directory.appendingPathComponent("config.json")
@@ -246,6 +246,6 @@ enum NotifierFiles {
               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let plugins = dict["enabledPlugins"] as? [String: Any]
         else { return nil }
-        return plugins["hue-notify@claude-hue-notify"] as? Bool
+        return plugins["lampsignal@lampsignal"] as? Bool ?? plugins["hue-notify@claude-hue-notify"] as? Bool
     }
 }

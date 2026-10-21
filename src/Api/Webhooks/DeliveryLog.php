@@ -99,18 +99,18 @@ final class DeliveryLog
     }
 
     /**
-     * Per user, never a shared directory: ~/.cache/philips-hue-client, or a
+     * Per user, never a shared directory: ~/.cache/lampsignal, or a
      * user-specific directory under the temp dir when there is no home.
      */
     private static function defaultDirectory(): string
     {
         $home = getenv('HOME') ?: '';
         if ($home !== '' && is_dir($home) && is_writable($home)) {
-            return $home . '/.cache/philips-hue-client';
+            return $home . '/.cache/lampsignal';
         }
 
         $user = function_exists('posix_geteuid') ? (string) posix_geteuid() : get_current_user();
 
-        return sys_get_temp_dir() . '/philips-hue-client-' . $user;
+        return sys_get_temp_dir() . '/lampsignal-' . $user;
     }
 }

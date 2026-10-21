@@ -1,5 +1,16 @@
 # Changelog
 
+## [3.0.0] - 2026-10-21
+
+### Changed
+- **New name: Lampsignal PHP.** The Composer package is now `oguzhantogay/lampsignal` (formerly `oguzhantogay/philips-hue-client`), the repository `oguzhanT/lampsignal-php`, and the macOS app Lampsignal for Mac (formerly HueBar, bundle id `com.oguzhantogay.lampsignal`). Product names no longer carry Signify's or Anthropic's marks; descriptions say what it works with. The PHP namespace (`OguzhanTogay\HueClient`), the `hue` CLI and the shared config path are unchanged, so code needs no edits: `composer remove oguzhantogay/philips-hue-client && composer require oguzhantogay/lampsignal`.
+- Webhook replay state moved to `~/.cache/lampsignal` (deliveries from the last 24 hours before the upgrade could be accepted once more).
+- Lampsignal for Mac has a new bundle id: macOS asks for local network access again and "Launch at login" must be set again. `build-app.sh --install` removes the old HueBar.app.
+
+### Fixed
+- Laravel's `hue:server` looked for the package under a vendor name that never existed, and did not pass `HUE_API_KEY` and the other REST settings from `.env` to the server, which then refused every request.
+
+
 ## [2.3.0] - 2026-10-21
 
 ### Changed

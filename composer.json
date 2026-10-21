@@ -1,6 +1,6 @@
 {
-    "name": "oguzhantogay/philips-hue-client",
-    "description": "A PHP client for Philips Hue: v1 and CLIP v2 APIs, real-time events, signals, CLI, REST server, Laravel and Symfony",
+    "name": "oguzhantogay/lampsignal",
+    "description": "Lampsignal PHP: a client for Philips Hue (v1 and CLIP v2, events, signals, CLI, REST, Laravel, Symfony). Independent project, not affiliated with Signify.",
     "type": "library",
     "license": "MIT",
     "keywords": [

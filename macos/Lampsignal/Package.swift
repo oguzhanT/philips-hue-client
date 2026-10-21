@@ -2,9 +2,9 @@
 import PackageDescription
 
 let package = Package(
-    name: "HueBar",
+    name: "Lampsignal",
     platforms: [.macOS(.v13)],
     targets: [
-        .executableTarget(name: "HueBar", path: "Sources/HueBar")
+        .executableTarget(name: "Lampsignal", path: "Sources/Lampsignal")
     ]
 )

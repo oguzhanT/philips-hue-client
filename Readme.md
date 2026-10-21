@@ -1,18 +1,20 @@
-# PHP client for Philips Hue
+# Lampsignal PHP
 
-*An independent open-source project, not affiliated with or endorsed by Signify (Philips Hue).*
+A PHP client for Philips Hue, and the core of [Lampsignal](https://github.com/oguzhanT/lampsignal): lamps that show what your tools are doing.
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
-[![Total Downloads](https://img.shields.io/packagist/dt/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
-[![Monthly Downloads](https://img.shields.io/packagist/dm/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
-[![PHP Version](https://img.shields.io/packagist/php-v/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
+*Formerly `oguzhantogay/philips-hue-client`. An independent open-source project, not affiliated with or endorsed by Signify (Philips Hue) or Anthropic.*
+
+[![Latest Version on Packagist](https://img.shields.io/packagist/v/oguzhantogay/lampsignal.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/lampsignal)
+[![Total Downloads](https://img.shields.io/packagist/dt/oguzhantogay/lampsignal.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/lampsignal)
+[![Monthly Downloads](https://img.shields.io/packagist/dm/oguzhantogay/lampsignal.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/lampsignal)
+[![PHP Version](https://img.shields.io/packagist/php-v/oguzhantogay/lampsignal.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/lampsignal)
 [![MIT Licensed](https://img.shields.io/badge/license-MIT-brightgreen.svg?style=flat-square)](LICENSE.md)
-[![GitHub Stars](https://img.shields.io/github/stars/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/stargazers)
-[![GitHub Forks](https://img.shields.io/github/forks/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/network)
-[![GitHub Issues](https://img.shields.io/github/issues/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/issues)
-[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/oguzhanT/philips-hue-client?style=flat-square)](https://github.com/oguzhanT/philips-hue-client/pulls)
-[![Latest Stable Version](https://poser.pugx.org/oguzhantogay/philips-hue-client/v/stable?format=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
-[![Composer Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
+[![GitHub Stars](https://img.shields.io/github/stars/oguzhanT/lampsignal-php?style=flat-square)](https://github.com/oguzhanT/lampsignal-php/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/oguzhanT/lampsignal-php?style=flat-square)](https://github.com/oguzhanT/lampsignal-php/network)
+[![GitHub Issues](https://img.shields.io/github/issues/oguzhanT/lampsignal-php?style=flat-square)](https://github.com/oguzhanT/lampsignal-php/issues)
+[![GitHub Pull Requests](https://img.shields.io/github/issues-pr/oguzhanT/lampsignal-php?style=flat-square)](https://github.com/oguzhanT/lampsignal-php/pulls)
+[![Latest Stable Version](https://poser.pugx.org/oguzhantogay/lampsignal/v/stable?format=flat-square)](https://packagist.org/packages/oguzhantogay/lampsignal)
+[![Composer Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen?style=flat-square)](https://packagist.org/packages/oguzhantogay/lampsignal)
 
 A PHP client for Philips Hue smart lights. Control lights, rooms, scenes, and schedules with a fluent API, from plain PHP, Laravel, or Symfony, or from the command line.
 
@@ -23,7 +25,7 @@ It speaks both bridge APIs: the classic **v1** API through `HueClient`, and **CL
 - 💡 **Lights, groups, scenes, schedules, sensors** - Hue v1 API, with a fluent interface for chaining
 - 🆕 **CLIP v2** - Lights, rooms, zones, scenes, devices; effects like candle and fire; colors fitted to each lamp's gamut
 - ⚡ **Real-time events** - The bridge's v2 event stream, in PHP and as `hue events`
-- 🔔 **Signals** - Lamps as build, deploy and agent notifications, shared with claude-hue-notify
+- 🔔 **Signals** - Lamps as build, deploy and agent notifications, shared with the Lampsignal plugin
 - 🔍 **Bridge discovery** - Local mDNS (no internet needed), then Philips' discovery service
 - 🎭 **Effects** - Color loop, breathing, alert flashes, and frame animations
 - 🛠️ **CLI tool** - `hue` for quick control from the terminal
@@ -32,7 +34,7 @@ It speaks both bridge APIs: the classic **v1** API through `HueClient`, and **CL
 - 🔁 **Retries and connection pooling** - Retries transient failures; manages several bridges
 - 💾 **Optional caching and rate limiting** - Turn on by installing `symfony/cache` and `symfony/rate-limiter`
 - 🐳 **Docker** - Development setup with Docker Compose
-- 🍎 **macOS menu bar app** - [HueBar](#-macos-menu-bar-app)
+- 🍎 **macOS menu bar app** - [Lampsignal for Mac](#-macos-menu-bar-app)
 
 ## 📋 Requirements
 
@@ -47,7 +49,7 @@ It speaks both bridge APIs: the classic **v1** API through `HueClient`, and **CL
 Install via Composer:
 
 ```bash
-composer require oguzhantogay/philips-hue-client
+composer require oguzhantogay/lampsignal
 ```
 
 ## 🔧 Quick Start
@@ -239,14 +241,14 @@ Other resource types (motion, temperature, button, ...) are available as `$hue->
 
 ### Signals: lamps as developer notifications
 
-Show a build, deploy or agent state on a lamp. The colors, the lamps and the pause switch are shared with [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) and [HueBar](#-macos-menu-bar-app); see [docs/signals.md](docs/signals.md).
+Show a build, deploy or agent state on a lamp. The colors, the lamps and the pause switch are shared with the [Lampsignal plugin](https://github.com/oguzhanT/lampsignal) and [Lampsignal for Mac](#-macos-menu-bar-app); see [docs/signals.md](docs/signals.md).
 
 ```php
 $client->signal()->send('success');                        // the notifier's lamps (light_ids)
 $client->signal()->send('error', ['Desk', 3]);             // lights by name or id
 $client->signal()->send('attention', 'Desk', restoreAfter: 10); // put the lamp back after 10 s
 
-$client->signal()->pause(3600);   // quiet for an hour (claude-hue-notify too)
+$client->signal()->pause(3600);   // quiet for an hour (the Lampsignal plugin too)
 $client->signal()->resume();
 ```
 
@@ -286,12 +288,12 @@ The package includes a powerful CLI tool:
 
 ```bash
 # Install globally
-composer global require oguzhantogay/philips-hue-client
+composer global require oguzhantogay/lampsignal
 
 # Discover bridges
 hue discover
 
-# Setup/authenticate (shares ~/.config/hue-notify/config.json with claude-hue-notify:
+# Setup/authenticate (shares ~/.config/hue-notify/config.json with the Lampsignal plugin:
 # already paired there? the CLI just works)
 hue setup
 
@@ -422,7 +424,7 @@ The REST server can turn GitHub and Sentry webhooks into [signals](#signals-lamp
 - `HUE_GITHUB_BRANCHES`: only these branches, e.g. `main` (default: all).
 - In GitHub, set the content type to `application/json`; form-encoded deliveries are refused with 415.
 - Workflow runs from forks are ignored, even on a branch called `main`.
-- Each signed delivery is accepted once per day (keyed by a hash of its signed body, since delivery-id headers are not signed), so captured deliveries cannot be replayed. Redelivering from GitHub's UI repeats the body and is ignored too. The state lives in `HUE_WEBHOOK_STATE_DIR` (default: `~/.cache/philips-hue-client`).
+- Each signed delivery is accepted once per day (keyed by a hash of its signed body, since delivery-id headers are not signed), so captured deliveries cannot be replayed. Redelivering from GitHub's UI repeats the body and is ignored too. The state lives in `HUE_WEBHOOK_STATE_DIR` (default: `~/.cache/lampsignal`).
 - The bridge is on your LAN and GitHub and Sentry are on the internet, so expose only `/hooks/` through a tunnel (Cloudflare Tunnel, ngrok, Tailscale Funnel).
 
 ### Example API Usage
@@ -476,7 +478,7 @@ HUE_CORS_ORIGINS=
 
 ```bash
 # Install the package
-composer require oguzhantogay/philips-hue-client
+composer require oguzhantogay/lampsignal
 
 # Publish configuration
 php artisan vendor:publish --tag=hue-config
@@ -623,7 +625,7 @@ php artisan cache:clear --tags=hue
 
 ```bash
 # Install the package
-composer require oguzhantogay/philips-hue-client
+composer require oguzhantogay/lampsignal
 
 # Discover bridges
 bin/console hue:discover
@@ -807,9 +809,9 @@ $hue = new \OguzhanTogay\HueClient\HueClient(
 
 ## 🍎 macOS Menu Bar App
 
-[`macos/HueBar`](macos/HueBar) is a small SwiftUI menu bar app: switch lights and rooms, set brightness and color, and pause or retarget the [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) notifier. Build it with `macos/HueBar/build-app.sh --install`. It is not part of the Composer package.
+[`macos/Lampsignal`](macos/Lampsignal) is a small SwiftUI menu bar app: switch lights and rooms, set brightness and color, and pause or retarget the [Lampsignal plugin](https://github.com/oguzhanT/lampsignal) notifier. Build it with `macos/Lampsignal/build-app.sh --install`. It is not part of the Composer package.
 
-<img src="macos/HueBar/docs/huebar.png" alt="HueBar menu bar app" width="356">
+<img src="macos/Lampsignal/docs/menu-bar.png" alt="Lampsignal for Mac" width="356">
 
 ## 🚧 Known limitations and roadmap
 
@@ -818,7 +820,7 @@ $hue = new \OguzhanTogay\HueClient\HueClient(
 - **TLS**: the bridge's certificate is signed by Philips' own CA. Pin it (see [Pinning the bridge certificate](#pinning-the-bridge-certificate)); without a pin it is not checked.
 - **Entertainment areas** (DTLS streaming) are not supported.
 
-Want Claude to control the lights? [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) ships an MCP server.
+Want Claude to control the lights? The [Lampsignal plugin](https://github.com/oguzhanT/lampsignal) ships an MCP server.
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
@@ -828,8 +830,8 @@ See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ```bash
 # Clone the repository
-git clone https://github.com/oguzhanT/philips-hue-client.git
-cd philips-hue-client
+git clone https://github.com/oguzhanT/lampsignal-php.git
+cd lampsignal-php
 
 # Copy environment file
 cp .env.example .env
@@ -965,19 +967,19 @@ Check the `/examples` directory for complete examples:
 
 | Project | Description |
 |---------|-------------|
-| [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) | Claude Code plugin: your desk lamp turns blue when Claude needs you, green when it is done |
-| [HueBar](macos/HueBar) | macOS menu bar app for lights, rooms and the notifier |
+| [Lampsignal plugin](https://github.com/oguzhanT/lampsignal) | Claude Code plugin: your desk lamp turns blue when Claude needs you, green when it is done |
+| [Lampsignal for Mac](macos/Lampsignal) | macOS menu bar app for lights, rooms and the notifier |
 
 **Built something with it?** Share it:
 
-[➕ Add your project](https://github.com/oguzhanT/philips-hue-client/discussions/new?category=show-and-tell)
+[➕ Add your project](https://github.com/oguzhanT/lampsignal-php/discussions/new?category=show-and-tell)
 
 ## 💬 Join the Discussion
 
-- 🐛 [Report bugs](https://github.com/oguzhanT/philips-hue-client/issues/new?template=bug_report.md)
-- 💡 [Request features](https://github.com/oguzhanT/philips-hue-client/issues/new?template=feature_request.md)  
-- 💬 [General discussion](https://github.com/oguzhanT/philips-hue-client/discussions)
-- 🆘 [Get help](https://github.com/oguzhanT/philips-hue-client/discussions/categories/q-a)
+- 🐛 [Report bugs](https://github.com/oguzhanT/lampsignal-php/issues/new?template=bug_report.md)
+- 💡 [Request features](https://github.com/oguzhanT/lampsignal-php/issues/new?template=feature_request.md)  
+- 💬 [General discussion](https://github.com/oguzhanT/lampsignal-php/discussions)
+- 🆘 [Get help](https://github.com/oguzhanT/lampsignal-php/discussions/categories/q-a)
 
 ## 🤝 Contributing
 
@@ -990,8 +992,8 @@ The MIT License (MIT). Please see [License File](LICENSE.md) for more informatio
 ## 🔗 Links
 
 - [Philips Hue API Documentation](https://developers.meethue.com/)
-- [Report Issues](https://github.com/oguzhanT/philips-hue-client/issues)
-- [Packagist](https://packagist.org/packages/oguzhantogay/philips-hue-client)
+- [Report Issues](https://github.com/oguzhanT/lampsignal-php/issues)
+- [Packagist](https://packagist.org/packages/oguzhantogay/lampsignal)
 
 ## 💖 Support
 

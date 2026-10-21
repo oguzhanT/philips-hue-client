@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @main
-struct HueBarApp: App {
+struct LampsignalApp: App {
     @StateObject private var model = HueModel()
 
     var body: some Scene {
