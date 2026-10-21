@@ -34,12 +34,16 @@ class EventStream
      * time is up, or the bridge closes the stream.
      *
      * @param callable(array): (bool|null) $onEvent
-     * @param float|null $seconds stop after this long; null listens until the stream ends
+     * @param float|null $seconds     stop after this long; null listens until the stream ends
+     * @param float      $idleTimeout the bridge sends a heartbeat regularly; nothing at all for
+     *                                this long means the connection is gone (bridge reboot,
+     *                                network drop) and a HueException tells you to reconnect
      * @return int number of events delivered
      */
-    public function listen(callable $onEvent, ?float $seconds = null): int
+    public function listen(callable $onEvent, ?float $seconds = null, float $idleTimeout = 120.0): int
     {
         $deadline = $seconds !== null ? microtime(true) + $seconds : null;
+        $lastData = microtime(true);
 
         try {
             $response = $this->http->request('GET', 'eventstream/clip/v2', [
@@ -69,12 +73,20 @@ class EventStream
             try {
                 $chunk = $body->read(8192);
             } catch (\RuntimeException) {
-                continue; // read timeout on a quiet stream; check the deadline again
+                $chunk = ''; // read timeout on a quiet stream
             }
 
             if ($chunk === '') {
+                if (microtime(true) - $lastData > $idleTimeout) {
+                    $body->close();
+                    throw new HueException(
+                        "Event stream silent for {$idleTimeout} s; the bridge connection was probably lost. Reconnect."
+                    );
+                }
                 continue;
             }
+
+            $lastData = microtime(true);
 
             $buffer .= str_replace("\r\n", "\n", $chunk);
 

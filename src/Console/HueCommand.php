@@ -645,7 +645,9 @@ class HueCommand extends Command
             return Command::FAILURE;
         }
 
-        $seconds = $input->getOption('duration') !== '30' ? (float) $input->getOption('duration') : null;
+        // --duration defaults to 30 for effects; here only an explicit value limits listening.
+        $given = $input->hasParameterOption(['--duration', '-d']);
+        $seconds = $given ? (float) $input->getOption('duration') : null;
         $output->writeln('<info>Listening to the bridge (CLIP v2 event stream). Ctrl+C to stop.</info>');
 
         $client->v2()->events()->listen(function (array $event) use ($output): bool {

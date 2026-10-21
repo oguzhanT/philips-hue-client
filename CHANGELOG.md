@@ -4,14 +4,18 @@
 
 ### Added
 - **CLIP v2 client**: `HueV2Client` (or `$client->v2()` with the same bridge and key). Lights with gamut-aware colors, color temperature clamped to the lamp's range, effects (candle, fire, ...), identify and transitions; rooms and zones with their grouped light, lights and scenes; scenes with static or dynamic recall; devices; any other resource type through `resources()`.
-- **Real-time events**: `$hue->events()->listen()` reads the bridge's v2 event stream; `hue events` prints it.
+- **Real-time events**: `$hue->events()->listen()` reads the bridge's v2 event stream and reports a lost connection after a silent `idleTimeout`; `hue events` prints it.
 - **Local discovery over mDNS** (`MdnsDiscovery`, needs ext-sockets). `BridgeDiscovery` tries it before Philips' discovery service, so `hue discover` works without internet.
 - `Color` and `Gamut` value objects.
 - Laravel binds `HueV2Client` next to `HueClient`.
 
 ### Changed
 - **BC:** hex colors are converted with the wide-gamut formula Philips documents (via `Color`) instead of plain sRGB, so v1 colors shift slightly towards what the lamps actually show. The four copies of the conversion are gone.
+- **BC:** `setColor()` and the color effects throw `InvalidArgumentException` for a malformed hex color instead of sending a meaningless color.
 - Bridge ids from different discovery methods are compared case-insensitively.
+
+### Security note
+- Discovery answers are not authenticated and the bridge's certificate is not checked by default (`verify` => false). On an untrusted network, configure the bridge IP yourself rather than trusting discovery; certificate pinning to the bridge id is planned for 2.x.
 
 ### Removed
 - **BC:** `HueClient::events()` and `Resources\Events`, a placeholder that never delivered events. Use `$client->v2()->events()`.

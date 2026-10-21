@@ -135,6 +135,22 @@ class HueV2ClientTest extends TestCase
         $this->assertSame('/eventstream/clip/v2', $this->history[0]['request']->getUri()->getPath());
     }
 
+    public function testEventStreamReportsALostConnection(): void
+    {
+        // A connection that stays open but never sends anything again.
+        $silent = \GuzzleHttp\Psr7\FnStream::decorate(\GuzzleHttp\Psr7\Utils::streamFor(''), [
+            'eof' => static fn () => false,
+            'read' => static function () {
+                usleep(20000);
+                return '';
+            },
+        ]);
+
+        $this->expectException(HueException::class);
+        $this->expectExceptionMessage('Reconnect');
+        $this->hue(new Response(200, [], $silent))->events()->listen(fn () => true, idleTimeout: 0.2);
+    }
+
     public function testEventStreamStopsWhenTheCallbackSaysSo(): void
     {
         $sse = str_repeat("data: [{\"type\":\"update\",\"data\":[]}]\n\n", 5);

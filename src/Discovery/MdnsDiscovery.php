@@ -104,13 +104,15 @@ class MdnsDiscovery
             $total = (int) $counts['an'] + (int) $counts['ns'] + (int) $counts['ar'];
             for ($i = 0; $i < $total; $i++) {
                 $name = self::readName($packet, $offset);
+                self::need($packet, $offset, 10);
                 $fixed = unpack('ntype/nclass/Nttl/nlength', substr($packet, $offset, 10));
                 $offset += 10;
                 $start = $offset;
+                self::need($packet, $offset, (int) $fixed['length']);
                 $offset += $fixed['length'];
 
                 $data = match ($fixed['type']) {
-                    self::TYPE_A => inet_ntop(substr($packet, $start, 4)),
+                    self::TYPE_A => $fixed['length'] === 4 ? inet_ntop(substr($packet, $start, 4)) : null,
                     self::TYPE_PTR => self::readName($packet, $start),
                     self::TYPE_SRV => self::readSrv($packet, $start),
                     self::TYPE_TXT => self::readTxt(substr($packet, $start, $fixed['length'])),
@@ -216,8 +218,19 @@ class MdnsDiscovery
         return implode('.', array_filter($labels, static fn ($l) => $l !== ''));
     }
 
+    /**
+     * Stops parsing before unpack() reads past the end of a short packet.
+     */
+    private static function need(string $packet, int $offset, int $bytes): void
+    {
+        if ($offset + $bytes > strlen($packet)) {
+            throw new \OutOfRangeException('Truncated record');
+        }
+    }
+
     private static function readSrv(string $packet, int $offset): array
     {
+        self::need($packet, $offset, 6);
         $fields = unpack('npriority/nweight/nport', substr($packet, $offset, 6));
         $offset += 6;
 
