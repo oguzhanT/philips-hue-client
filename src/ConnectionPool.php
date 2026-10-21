@@ -60,17 +60,23 @@ class ConnectionPool
     }
 
     /**
-     * Each bridge's reachability, through its own client so pins and token
-     * redaction apply.
+     * Each bridge's reachability, through a pinned, redacting client.
      */
     public function healthCheck(): array
     {
         $results = [];
 
-        foreach (array_keys($this->bridges) as $ip) {
+        foreach ($this->bridges as $ip => $username) {
             $started = microtime(true);
-            $client = $this->getClient($ip);
-            $healthy = $client !== null && $client->isConnected();
+            // One attempt, no retries or cache: an unreachable bridge should
+            // cost one timeout, not the retry schedule.
+            $probe = new HueClient((string) $ip, $username, [
+                'timeout' => $this->timeout,
+                'retry_attempts' => 0,
+                'cache_enabled' => false,
+                'pinned_public_key' => $this->pins[$ip] ?? null,
+            ], $this->logger);
+            $healthy = $probe->isConnected();
 
             $results[$ip] = [
                 'status' => $healthy ? 'healthy' : 'unhealthy',
