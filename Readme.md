@@ -419,7 +419,7 @@ The REST server can turn GitHub and Sentry webhooks into [signals](#signals-lamp
 - `HUE_GITHUB_BRANCHES`: only these branches, e.g. `main` (default: all).
 - In GitHub, set the content type to `application/json`; form-encoded deliveries are refused with 415.
 - Workflow runs from forks are ignored, even on a branch called `main`.
-- A captured delivery can be replayed; at worst it changes a lamp's color.
+- A delivery id (`X-GitHub-Delivery`, Sentry's `Request-ID`) is accepted once per day, so captured deliveries cannot be replayed. Redelivering from GitHub's UI reuses the id and is ignored too. The ids live in `HUE_WEBHOOK_STATE_DIR` (default: the system temp directory).
 - The bridge is on your LAN and GitHub and Sentry are on the internet, so expose only `/hooks/` through a tunnel (Cloudflare Tunnel, ngrok, Tailscale Funnel).
 
 ### Example API Usage

@@ -83,7 +83,7 @@ final class HueModel: ObservableObject {
     private func loadConfig() {
         let config = NotifierFiles.loadConfig()
         if let ip = config["bridge_ip"] as? String, let token = config["token"] as? String, !ip.isEmpty, !token.isEmpty {
-            api = HueAPI(ip: ip, token: token)
+            api = HueAPI(ip: ip, token: token, pin: config["cert_sha256"] as? String)
             bridgeIP = ip
         } else {
             api = nil
@@ -283,8 +283,12 @@ final class HueModel: ObservableObject {
 
     func pair(ip: String) async {
         do {
-            let token = try await HueAPI.pair(ip: ip)
-            try NotifierFiles.updateConfig(["bridge_ip": ip, "token": token])
+            let paired = try await HueAPI.pair(ip: ip)
+            var changes: [String: Any] = ["bridge_ip": ip, "token": paired.token]
+            if let certificate = paired.certificateSHA256 {
+                changes["cert_sha256"] = certificate
+            }
+            try NotifierFiles.updateConfig(changes)
             loadConfig()
             errorMessage = nil
             await refresh()

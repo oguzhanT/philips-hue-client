@@ -1,5 +1,15 @@
 # Changelog
 
+## [2.2.0] - 2026-10-21
+
+### Security
+- **Webhook replay protection**: each GitHub (`X-GitHub-Delivery`) and Sentry (`Request-ID`) delivery id is accepted once per day; repeats get 200 and change nothing. Ids are recorded only after the signature checks out. Stored in `HUE_WEBHOOK_STATE_DIR`.
+- **HueBar talks to the bridge over HTTPS** and pins its certificate (`cert_sha256`, shared with claude-hue-notify 1.3.0); before, the token went over plain HTTP. Pairing pins the certificate the token is received over; older configs pin on first use.
+
+### Changed
+- `docs/signals.md`: the config's `cert_sha256` pin.
+
+
 ## [2.1.0] - 2026-10-21
 
 ### Added

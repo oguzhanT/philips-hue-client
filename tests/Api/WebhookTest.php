@@ -21,6 +21,10 @@ class WebhookTest extends TestCase
 
     protected function tearDown(): void
     {
+        if ($this->stateDir !== null) {
+            array_map('unlink', glob($this->stateDir . '/*') ?: []);
+            @rmdir($this->stateDir);
+        }
         Mockery::close();
     }
 
@@ -68,6 +72,38 @@ class WebhookTest extends TestCase
         $this->assertSame([[SignalType::Error, ['Desk']]], $this->sent);
     }
 
+    public function testAReplayedDeliveryIsIgnored(): void
+    {
+        $body = (string) json_encode(['action' => 'completed', 'workflow_run' => ['conclusion' => 'failure', 'head_branch' => 'main']]);
+        $headers = [
+            'X-GitHub-Event' => 'workflow_run',
+            'X-GitHub-Delivery' => 'delivery-' . bin2hex(random_bytes(4)),
+            'X-Hub-Signature-256' => 'sha256=' . hash_hmac('sha256', $body, 'gh-secret'),
+        ];
+
+        $this->post('/hooks/github', $body, $headers);
+        $second = $this->post('/hooks/github', $body, $headers);
+
+        $this->assertSame(200, $second->getStatusCode());
+        $this->assertStringContainsString('Duplicate', (string) $second->getBody());
+        $this->assertCount(1, $this->sent, 'the lamp changed once');
+    }
+
+    public function testUnsignedDeliveriesAreNotRecorded(): void
+    {
+        $id = 'delivery-' . bin2hex(random_bytes(4));
+        $this->post('/hooks/github', '{}', ['X-GitHub-Event' => 'ping', 'X-GitHub-Delivery' => $id, 'X-Hub-Signature-256' => 'sha256=00']);
+
+        $body = '{}';
+        $response = $this->post('/hooks/github', $body, [
+            'X-GitHub-Event' => 'ping',
+            'X-GitHub-Delivery' => $id,
+            'X-Hub-Signature-256' => 'sha256=' . hash_hmac('sha256', $body, 'gh-secret'),
+        ]);
+
+        $this->assertStringContainsString('pong', (string) $response->getBody());
+    }
+
     public function testRejectsABadSignature(): void
     {
         $response = $this->post('/hooks/github', '{"action":"completed"}', [
@@ -105,6 +141,17 @@ class WebhookTest extends TestCase
         $this->assertSame(401, $response->getStatusCode());
     }
 
+    private ?string $stateDir = null;
+
+    private function stateDir(): string
+    {
+        if ($this->stateDir === null) {
+            $this->stateDir = sys_get_temp_dir() . '/hue-webhook-test-' . bin2hex(random_bytes(4));
+            mkdir($this->stateDir);
+        }
+        return $this->stateDir;
+    }
+
     private function post(string $path, string $body, array $headers, ?array $webhooks = null): ResponseInterface
     {
         $signaler = Mockery::mock(Signaler::class);
@@ -117,7 +164,8 @@ class WebhookTest extends TestCase
 
         $api = new RestApi($client, [
             'api_key' => 'key',
-            'webhooks' => $webhooks ?? ['github_secret' => 'gh-secret', 'sentry_secret' => 'sentry-secret', 'lights' => ['Desk']],
+            'webhooks' => ($webhooks ?? ['github_secret' => 'gh-secret', 'sentry_secret' => 'sentry-secret', 'lights' => ['Desk']])
+                + ['state_dir' => $this->stateDir()],
         ]);
 
         $request = new Request(

@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 enum HueError: LocalizedError {
@@ -10,18 +11,81 @@ enum HueError: LocalizedError {
     }
 }
 
-/// Minimal client for the Hue bridge's local v1 REST API.
+/// Accepts the bridge's certificate only if its SHA-256 matches the pin (shared
+/// with claude-hue-notify as `cert_sha256`, see docs/signals.md). The bridge's
+/// certificate comes from Philips' own CA, which macOS does not trust, so the
+/// pin is the check. With no pin yet, the first certificate seen is accepted
+/// and reported back to be saved: trust on first use, like SSH.
+final class BridgePinning: NSObject, URLSessionDelegate {
+    let expected: String?
+    private(set) var seen: String?
+
+    init(expected: String?) {
+        self.expected = expected?.lowercased()
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        didReceive challenge: URLAuthenticationChallenge,
+        completionHandler: @escaping (URLSession.AuthChallengeDisposition, URLCredential?) -> Void
+    ) {
+        guard challenge.protectionSpace.authenticationMethod == NSURLAuthenticationMethodServerTrust,
+              let trust = challenge.protectionSpace.serverTrust,
+              let leaf = (SecTrustCopyCertificateChain(trust) as? [SecCertificate])?.first
+        else {
+            completionHandler(.cancelAuthenticationChallenge, nil)
+            return
+        }
+
+        let digest = SHA256.hash(data: SecCertificateCopyData(leaf) as Data)
+        let fingerprint = digest.map { String(format: "%02x", $0) }.joined()
+        seen = fingerprint
+
+        if expected == nil || expected == fingerprint {
+            completionHandler(.useCredential, URLCredential(trust: trust))
+        } else {
+            completionHandler(.cancelAuthenticationChallenge, nil)
+        }
+    }
+
+    /// Runs one request over a session that enforces this pin.
+    func data(for request: URLRequest) async throws -> Data {
+        let session = URLSession(configuration: .ephemeral, delegate: self, delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        do {
+            return try await session.data(for: request).0
+        } catch {
+            if let expected, let seen, expected != seen {
+                throw HueError.bridge("Köprü sabitlenen sertifikadan farklı bir sertifika sundu; bağlantı kesildi.")
+            }
+            throw error
+        }
+    }
+}
+
+/// Minimal client for the Hue bridge's local v1 REST API, over pinned HTTPS.
 struct HueAPI {
     let ip: String
     let token: String
+    /// SHA-256 of the bridge certificate (config `cert_sha256`); nil pins on first use.
+    let pin: String?
 
     private func url(_ path: String) -> URL {
-        URL(string: "http://\(ip)/api/\(token)/\(path)")!
+        URL(string: "https://\(ip)/api/\(token)/\(path)")!
+    }
+
+    private func send(_ request: URLRequest) async throws -> Data {
+        let pinning = BridgePinning(expected: pin)
+        let data = try await pinning.data(for: request)
+        if pin == nil, let seen = pinning.seen {
+            try? NotifierFiles.updateConfig(["cert_sha256": seen])
+        }
+        return data
     }
 
     func get(_ path: String) async throws -> [String: Any] {
         let request = URLRequest(url: url(path), timeoutInterval: 5)
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let data = try await send(request)
         let object = try JSONSerialization.jsonObject(with: data)
         try Self.throwIfError(object)
         guard let dict = object as? [String: Any] else {
@@ -35,7 +99,7 @@ struct HueAPI {
         request.httpMethod = "PUT"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let data = try await send(request)
         try Self.throwIfError(try JSONSerialization.jsonObject(with: data))
 
         // A change made here is newer than any state another sender (the PHP
@@ -64,17 +128,19 @@ struct HueAPI {
         return found.first?["internalipaddress"] as? String
     }
 
-    /// Creates an app token. The bridge's link button must be pressed first.
-    static func pair(ip: String) async throws -> String {
-        guard let url = URL(string: "http://\(ip)/api") else { throw HueError.bridge("Geçersiz IP") }
+    /// Creates an app token over HTTPS and pins the certificate it was sent over.
+    /// The bridge's link button must be pressed first.
+    static func pair(ip: String) async throws -> (token: String, certificateSHA256: String?) {
+        guard let url = URL(string: "https://\(ip)/api") else { throw HueError.bridge("Geçersiz IP") }
         var request = URLRequest(url: url, timeoutInterval: 8)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = try JSONSerialization.data(withJSONObject: ["devicetype": "huebar#mac"])
-        let (data, _) = try await URLSession.shared.data(for: request)
+        let pinning = BridgePinning(expected: nil)
+        let data = try await pinning.data(for: request)
         let items = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] ?? []
         if let success = items.first?["success"] as? [String: Any], let token = success["username"] as? String {
-            return token
+            return (token, pinning.seen)
         }
         if let error = items.first?["error"] as? [String: Any], error["type"] as? Int == 101 {
             throw HueError.bridge("Köprüdeki butona basılmadı. Basıp tekrar deneyin.")

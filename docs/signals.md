@@ -34,12 +34,14 @@ Every sender that changes a lamp without restoring it (claude-hue-notify, its MC
   "bridge_ip": "192.168.1.2",
   "token": "<bridge username>",
   "light_id": "7",
-  "light_ids": ["7", "12"]
+  "light_ids": ["7", "12"],
+  "cert_sha256": "3ff07a82e8e2…"
 }
 ```
 
 - `light_ids` are the notifier's lamps. When it is missing or empty, `light_id` is the only lamp. Writers keep `light_id` equal to the first entry for older readers.
 - The file holds the bridge token: create it readable by its owner only (0600), and keep it so when rewriting it.
+- `cert_sha256` is the SHA-256 (hex, lower case) of the bridge's whole certificate. Readers talk to the bridge over HTTPS and refuse to send the token to any other certificate; with no pin yet, the first certificate seen is pinned and written back (trust on first use). claude-hue-notify and HueBar use it; the PHP library pins the public key instead (`pinned_public_key`), which a renewed certificate with the same key still matches.
 
 ## Pause file
 

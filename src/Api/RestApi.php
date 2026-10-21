@@ -78,8 +78,8 @@ class RestApi
 
     /**
      * Options from HUE_API_KEY, HUE_API_INSECURE, HUE_CORS_ORIGINS, HUE_DEBUG,
-     * HUE_GITHUB_WEBHOOK_SECRET, HUE_SENTRY_WEBHOOK_SECRET, HUE_WEBHOOK_LIGHTS
-     * and HUE_GITHUB_BRANCHES (lists comma separated).
+     * HUE_GITHUB_WEBHOOK_SECRET, HUE_SENTRY_WEBHOOK_SECRET, HUE_WEBHOOK_LIGHTS,
+     * HUE_GITHUB_BRANCHES (lists comma separated) and HUE_WEBHOOK_STATE_DIR.
      */
     public static function optionsFromEnvironment(): array
     {
@@ -98,6 +98,7 @@ class RestApi
                 'sentry_secret' => getenv('HUE_SENTRY_WEBHOOK_SECRET') ?: null,
                 'lights' => $list('HUE_WEBHOOK_LIGHTS'),
                 'branches' => $list('HUE_GITHUB_BRANCHES'),
+                'state_dir' => getenv('HUE_WEBHOOK_STATE_DIR') ?: null,
             ],
         ];
     }
