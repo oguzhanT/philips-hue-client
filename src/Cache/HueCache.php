@@ -30,7 +30,7 @@ class HueCache
         $this->cache = $this->createCacheAdapter($cacheType, $config);
     }
 
-    public function get(string $resource, string $key, callable $dataProvider = null): mixed
+    public function get(string $resource, string $key, ?callable $dataProvider = null): mixed
     {
         $cacheKey = $this->buildCacheKey($resource, $key);
         $item = $this->cache->getItem($cacheKey);

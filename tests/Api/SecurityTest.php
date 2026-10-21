@@ -101,7 +101,7 @@ class SecurityTest extends TestCase
 
     public function testBodylessWritesNeedNoContentType(): void
     {
-        $this->client->shouldReceive('scenes->activate')->with('abc')->andReturnNull();
+        $this->client->shouldReceive('scenes->activate')->with('abc')->andReturn(true);
         $api = new RestApi($this->client, ['api_key' => 'right']);
 
         // Like php://input under PHP's built-in server: empty, size unknown.

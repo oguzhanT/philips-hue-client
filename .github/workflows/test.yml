@@ -57,6 +57,8 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: matrix.php-version == '8.2'
+      # Reporting only; a missing Codecov token must not fail the build.
+      continue-on-error: true
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/clover.xml
