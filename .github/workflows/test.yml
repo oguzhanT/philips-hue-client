@@ -12,7 +12,7 @@ jobs:
     
     strategy:
       matrix:
-        php-version: [8.2]
+        php-version: ['8.2', '8.3', '8.4']
 
     steps:
     - uses: actions/checkout@v4
@@ -23,13 +23,14 @@ jobs:
         php-version: ${{ matrix.php-version }}
         extensions: json, curl, mbstring
         tools: composer:v2
+        coverage: ${{ matrix.php-version == '8.2' && 'pcov' || 'none' }}
 
     - name: Get composer cache directory
       id: composer-cache
       run: echo "dir=$(composer config cache-files-dir)" >> $GITHUB_OUTPUT
 
     - name: Cache composer dependencies
-      uses: actions/cache@v3
+      uses: actions/cache@v4
       with:
         path: ${{ steps.composer-cache.outputs.dir }}
         key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
@@ -37,6 +38,9 @@ jobs:
 
     - name: Install dependencies
       run: composer install --prefer-dist --no-progress
+
+    - name: Check for known vulnerabilities
+      run: composer audit --abandoned=report
 
     - name: Run code style check
       run: composer cs
@@ -53,6 +57,8 @@ jobs:
 
     - name: Upload coverage to Codecov
       if: matrix.php-version == '8.2'
+      # Reporting only; a missing Codecov token must not fail the build.
+      continue-on-error: true
       uses: codecov/codecov-action@v3
       with:
         file: ./coverage/clover.xml

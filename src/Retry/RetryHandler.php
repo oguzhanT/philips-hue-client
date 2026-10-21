@@ -13,15 +13,24 @@ class RetryHandler
     private array $retryDelays;
     private LoggerInterface $logger;
     private array $retryableExceptions;
+    /** @var \Closure(string): string */
+    private \Closure $sanitize;
 
+    /**
+     * @param (callable(string): string)|null $sanitize Cleans exception messages before they are logged
+     */
     public function __construct(
         int $maxRetries = 3,
         array $retryDelays = [1, 2, 4], // Exponential backoff in seconds
-        ?LoggerInterface $logger = null
+        ?LoggerInterface $logger = null,
+        ?callable $sanitize = null
     ) {
         $this->maxRetries = $maxRetries;
         $this->retryDelays = $retryDelays;
         $this->logger = $logger ?? new NullLogger();
+        $this->sanitize = $sanitize !== null
+            ? \Closure::fromCallable($sanitize)
+            : static fn (string $message): string => $message;
         $this->retryableExceptions = [
             ConnectException::class,
             RequestException::class
@@ -60,7 +69,7 @@ class RetryHandler
                     'attempt' => $attempt + 1,
                     'max_retries' => $this->maxRetries,
                     'delay' => $delay,
-                    'error' => $exception->getMessage()
+                    'error' => ($this->sanitize)($exception->getMessage())
                 ]);
 
                 sleep($delay);
@@ -71,7 +80,7 @@ class RetryHandler
         $this->logger->error("Operation failed after all retries", [
             'operation' => $operationName,
             'total_attempts' => $attempt + 1,
-            'final_error' => $lastException?->getMessage() ?? 'Unknown error'
+            'final_error' => $lastException ? ($this->sanitize)($lastException->getMessage()) : 'Unknown error'
         ]);
 
         throw $lastException ?? new \Exception('Operation failed');

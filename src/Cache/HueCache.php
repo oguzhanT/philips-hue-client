@@ -30,7 +30,7 @@ class HueCache
         $this->cache = $this->createCacheAdapter($cacheType, $config);
     }
 
-    public function get(string $resource, string $key, callable $dataProvider = null): mixed
+    public function get(string $resource, string $key, ?callable $dataProvider = null): mixed
     {
         $cacheKey = $this->buildCacheKey($resource, $key);
         $item = $this->cache->getItem($cacheKey);
@@ -96,24 +96,9 @@ class HueCache
 
     public function invalidate(string $resource): bool
     {
-        $pattern = $this->buildCacheKey($resource, '*');
-
-        // For filesystem cache, we need to clear by pattern
-        if ($this->cache instanceof FilesystemAdapter) {
-            return $this->cache->clear();
-        }
-
-        // For Redis, we can use pattern matching
-        if ($this->cache instanceof RedisAdapter) {
-            $redis = $this->cache->getRedis();
-            $keys = $redis->keys($pattern);
-
-            if (!empty($keys)) {
-                return $redis->del($keys) > 0;
-            }
-        }
-
-        return true;
+        // The adapters cannot delete by pattern (Redis KEYS would block the
+        // server), so clear this cache's whole namespace; it only holds Hue data.
+        return $this->cache->clear();
     }
 
     public function clear(): bool

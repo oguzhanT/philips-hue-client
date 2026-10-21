@@ -10,7 +10,11 @@
             <exclude>tests/Integration</exclude>
             <exclude>tests/Laravel</exclude>
             <exclude>tests/Symfony</exclude>
-            <exclude>tests/Api</exclude>
         </testsuite>
     </testsuites>
+    <coverage>
+        <include>
+            <directory suffix=".php">src</directory>
+        </include>
+    </coverage>
 </phpunit>

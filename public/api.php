@@ -6,48 +6,36 @@ use OguzhanTogay\HueClient\HueClient;
 use OguzhanTogay\HueClient\Api\RestApi;
 use OguzhanTogay\HueClient\Discovery\BridgeDiscovery;
 
-// Configuration
-$config = [
-    'bridge_ip' => $_ENV['HUE_BRIDGE_IP'] ?? null,
-    'username' => $_ENV['HUE_USERNAME'] ?? null,
-    'auto_discover' => $_ENV['HUE_AUTO_DISCOVER'] ?? true,
-];
+// Front controller for the REST API. Configuration comes from the environment
+// (getenv, so it works whatever php.ini's variables_order is):
+//   HUE_BRIDGE_IP, HUE_USERNAME, HUE_AUTO_DISCOVER,
+//   HUE_API_KEY, HUE_API_INSECURE, HUE_CORS_ORIGINS, HUE_DEBUG
 
-// Auto-discover bridge if not configured
-if (!$config['bridge_ip'] && $config['auto_discover']) {
-    echo "Auto-discovering Hue Bridge...\n";
-    $discovery = new BridgeDiscovery();
-    $bridges = $discovery->discover();
-    
-    if (!empty($bridges)) {
-        $config['bridge_ip'] = $bridges[0]->getIp();
-        echo "Found bridge at: {$config['bridge_ip']}\n";
-    } else {
-        die("No Hue bridges found. Please set HUE_BRIDGE_IP environment variable.\n");
-    }
+function hue_fail(string $message, int $status = 503): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => true, 'message' => $message]);
+    exit;
 }
 
-if (!$config['bridge_ip']) {
-    die("Bridge IP not configured. Please set HUE_BRIDGE_IP environment variable.\n");
+$bridgeIp = getenv('HUE_BRIDGE_IP') ?: null;
+$username = getenv('HUE_USERNAME') ?: null;
+// Off by default: PHP's built-in server runs this file per request, and
+// Philips rate limits its discovery service.
+$autoDiscover = filter_var(getenv('HUE_AUTO_DISCOVER') ?: 'false', FILTER_VALIDATE_BOOLEAN);
+
+if (!$bridgeIp && $autoDiscover) {
+    $bridges = (new BridgeDiscovery())->discover();
+    $bridgeIp = $bridges !== [] ? $bridges[0]->getIp() : null;
 }
 
-if (!$config['username']) {
-    die("Username not configured. Please set HUE_USERNAME environment variable or use the registration endpoint.\n");
+if (!$bridgeIp) {
+    hue_fail('Bridge IP not configured. Set HUE_BRIDGE_IP (or HUE_AUTO_DISCOVER=1).');
 }
 
-try {
-    // Create Hue client
-    $hueClient = new HueClient($config['bridge_ip'], $config['username']);
-    
-    // Test connection
-    if (!$hueClient->isConnected()) {
-        die("Cannot connect to Hue Bridge at {$config['bridge_ip']}\n");
-    }
-    
-    // Create and run REST API
-    $api = new RestApi($hueClient);
-    $api->run();
-    
-} catch (Exception $e) {
-    die("Error starting API server: " . $e->getMessage() . "\n");
+if (!$username) {
+    hue_fail('Username not configured. Set HUE_USERNAME.');
 }
+
+(new RestApi(new HueClient($bridgeIp, $username), RestApi::optionsFromEnvironment()))->run();

@@ -20,7 +20,7 @@ class RestApiTest extends TestCase
     {
         parent::setUp();
         $this->mockClient = Mockery::mock(HueClient::class);
-        $this->api = new RestApi($this->mockClient);
+        $this->api = new RestApi($this->mockClient, ['api_key' => 'test-key']);
     }
 
     protected function tearDown(): void
@@ -142,6 +142,8 @@ class RestApiTest extends TestCase
         fwrite($handle, $body);
         rewind($handle);
         $stream = (new StreamFactory())->createStreamFromResource($handle);
+
+        $headers += ['Authorization' => 'Bearer test-key'];
 
         return new Request($method, $uri, new Headers($headers), [], [], $stream);
     }

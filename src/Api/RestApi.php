@@ -9,6 +9,9 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use OguzhanTogay\HueClient\HueClient;
 use OguzhanTogay\HueClient\Api\Middleware\RateLimitMiddleware;
 use OguzhanTogay\HueClient\Api\Middleware\CacheMiddleware;
+use OguzhanTogay\HueClient\Api\Middleware\ApiKeyMiddleware;
+use OguzhanTogay\HueClient\Api\Middleware\CorsMiddleware;
+use OguzhanTogay\HueClient\Api\Middleware\JsonBodyMiddleware;
 use OguzhanTogay\HueClient\Api\Controllers\LightsController;
 use OguzhanTogay\HueClient\Api\Controllers\GroupsController;
 use OguzhanTogay\HueClient\Api\Controllers\ScenesController;
@@ -22,7 +25,7 @@ use OguzhanTogay\HueClient\Api\Controllers\BridgeController;
  *     version="1.0.0",
  *     description="REST API for controlling Philips Hue lights, rooms, scenes, and more",
  *     @OA\Contact(
- *         email="oguzhan.togay@rgibilisim.com",
+ *         email="oguzhan.togay@rgbilisim.com",
  *         name="Oguzhan Togay"
  *     ),
  *     @OA\License(
@@ -38,43 +41,75 @@ use OguzhanTogay\HueClient\Api\Controllers\BridgeController;
  *     securityScheme="HueAuth",
  *     type="http",
  *     scheme="bearer",
- *     description="Hue Bridge Username Token"
+ *     description="The API key set in HUE_API_KEY; also accepted as an X-API-Key header"
  * )
  */
 class RestApi
 {
     private App $app;
     private HueClient $hueClient;
+    private array $options;
 
-    public function __construct(HueClient $hueClient)
+    /**
+     * @param array{api_key?: ?string, allow_insecure?: bool, cors_origins?: string[], debug?: bool} $options
+     *   api_key         required on every request except /api/health and the docs
+     *   allow_insecure  run without an API key (trusted networks only)
+     *   cors_origins    browser origins allowed to call the API; none by default
+     *   debug           show error details in responses
+     */
+    public function __construct(HueClient $hueClient, array $options = [])
     {
         $this->hueClient = $hueClient;
+        $this->options = $options + [
+            'api_key' => null,
+            'allow_insecure' => false,
+            'cors_origins' => [],
+            'debug' => false,
+        ];
         $this->app = AppFactory::create();
-        $this->setupMiddleware();
         $this->setupRoutes();
+        $this->setupMiddleware();
+    }
+
+    /**
+     * Options from HUE_API_KEY, HUE_API_INSECURE, HUE_CORS_ORIGINS (comma
+     * separated) and HUE_DEBUG.
+     */
+    public static function optionsFromEnvironment(): array
+    {
+        $flag = static fn (string $name): bool =>
+            filter_var(getenv($name) ?: 'false', FILTER_VALIDATE_BOOLEAN);
+        $origins = array_values(array_filter(array_map('trim', explode(',', (string) getenv('HUE_CORS_ORIGINS')))));
+
+        return [
+            'api_key' => getenv('HUE_API_KEY') ?: null,
+            'allow_insecure' => $flag('HUE_API_INSECURE'),
+            'cors_origins' => $origins,
+            'debug' => $flag('HUE_DEBUG'),
+        ];
     }
 
     private function setupMiddleware(): void
     {
-        $this->app->addErrorMiddleware(true, true, true);
-
-        if (class_exists('\Symfony\Component\RateLimiter\RateLimiterFactory')) {
-            $this->app->add(new RateLimitMiddleware());
-        }
+        // Slim runs middleware last-added first, so this list goes from the
+        // route outwards: routing, cache, JSON check, auth, rate limit, CORS,
+        // errors. Routing sits innermost so CORS can answer preflights for any
+        // path; the rate limit sits outside auth so it also slows key guessing.
+        $this->app->addRoutingMiddleware();
 
         if (class_exists('\Symfony\Component\Cache\Adapter\FilesystemAdapter')) {
             $this->app->add(new CacheMiddleware());
         }
 
-        $this->app->add(function (Request $request, $handler): Response {
-            $response = $handler->handle($request);
-            $headers = 'X-Requested-With, Content-Type, Accept, Origin, Authorization';
-            return $response
-                ->withHeader('Access-Control-Allow-Origin', '*')
-                ->withHeader('Access-Control-Allow-Headers', $headers)
-                ->withHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS')
-                ->withHeader('Content-Type', 'application/json');
-        });
+        $this->app->add(new JsonBodyMiddleware());
+        $this->app->add(new ApiKeyMiddleware($this->options['api_key'], (bool) $this->options['allow_insecure']));
+
+        if (class_exists('\Symfony\Component\RateLimiter\RateLimiterFactory')) {
+            $this->app->add(new RateLimitMiddleware());
+        }
+
+        $this->app->add(new CorsMiddleware($this->options['cors_origins']));
+        $this->app->addErrorMiddleware((bool) $this->options['debug'], true, true);
     }
 
     private function setupRoutes(): void
@@ -126,7 +161,11 @@ class RestApi
         $this->app->get('/api/sensors/{id}', [$sensorsController, 'get']);
         $this->app->put('/api/sensors/{id}/state', [$sensorsController, 'setState']);
 
-        // Swagger documentation
+        // Swagger documentation, when zircote/swagger-php is installed
+        if (!class_exists(\OpenApi\Generator::class)) {
+            return;
+        }
+
         $this->app->get('/api/docs', function (Request $request, Response $response) {
             $swaggerJson = $this->generateSwaggerJson();
             $response->getBody()->write($swaggerJson);
