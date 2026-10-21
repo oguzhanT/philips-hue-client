@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.0] - 2026-10-21
+
+### Added
+- **Signals**: `$client->signal()->send('success' | 'error' | 'attention' | 'warning' | 'working' | 'off', $lights, restoreAfter: $seconds)`. Defaults to claude-hue-notify's lamps, honours its pause file, and can restore the previous state. The shared contract is in [docs/signals.md](docs/signals.md).
+- **CLI**: `hue signal <type> [--light=...] [--restore=N]`, `hue pause [minutes]`, `hue resume`.
+- **Laravel notification channel**: `HueChannel` and `HueMessage` (`toHue()`, `routeNotificationForHue()`).
+
+### Removed
+- `hue interactive`, which printed a prompt and did nothing.
+
+
 ## [1.1.0] - 2026-10-21
 
 ### Security

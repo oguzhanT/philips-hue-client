@@ -7,6 +7,7 @@ use OguzhanTogay\HueClient\Discovery\BridgeDiscovery;
 use OguzhanTogay\HueClient\Effects\ColorLoop;
 use OguzhanTogay\HueClient\Effects\Breathing;
 use OguzhanTogay\HueClient\Effects\Alert;
+use OguzhanTogay\HueClient\Signal\Signaler;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -42,7 +43,14 @@ class HueCommand extends Command
             ->addOption('color', 'c', InputOption::VALUE_REQUIRED, 'Set color (hex)')
             ->addOption('temperature', 't', InputOption::VALUE_REQUIRED, 'Set color temperature (Kelvin)')
             ->addOption('duration', 'd', InputOption::VALUE_REQUIRED, 'Effect duration in seconds', '30')
-            ->addOption('room', 'r', InputOption::VALUE_REQUIRED, 'Target room');
+            ->addOption('room', 'r', InputOption::VALUE_REQUIRED, 'Target room')
+            ->addOption(
+                'light',
+                'l',
+                InputOption::VALUE_REQUIRED | InputOption::VALUE_IS_ARRAY,
+                'Signal: light name or id (repeatable)'
+            )
+            ->addOption('restore', null, InputOption::VALUE_REQUIRED, 'Signal: restore previous state after N seconds');
     }
 
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -76,8 +84,6 @@ class HueCommand extends Command
                     return $this->handleScene($input, $output);
                 case 'effect':
                     return $this->runEffect($input, $output);
-                case 'interactive':
-                    return $this->interactiveMode($input, $output);
                 case 'server':
                     return $this->startServer($input, $output);
                 case 'sensors':
@@ -86,6 +92,14 @@ class HueCommand extends Command
                     return $this->listSchedules($input, $output);
                 case 'status':
                     return $this->showStatus($input, $output);
+                case 'signal':
+                    return $this->sendSignal($input, $output);
+                case 'pause':
+                    return $this->pauseSignals($input, $output);
+                case 'resume':
+                    (new Signaler(null))->resume();
+                    $output->writeln('<info>Signals resumed.</info>');
+                    return Command::SUCCESS;
                 default:
                     $output->writeln("<error>Unknown action: {$action}</error>");
                     $this->showHelp($output);
@@ -439,33 +453,6 @@ class HueCommand extends Command
         return Command::SUCCESS;
     }
 
-    private function interactiveMode(InputInterface $input, OutputInterface $output): int
-    {
-        $output->writeln('<info>Entering interactive mode. Type "exit" to quit.</info>');
-        /** @var QuestionHelper $helper */
-        $helper = $this->getHelper('question');
-
-        while (true) {
-            $question = new Question('hue> ');
-            $command = $helper->ask($input, $output, $question);
-
-            if (!$command) {
-                continue;
-            }
-
-            if (trim($command) === 'exit') {
-                break;
-            }
-
-            // Parse and execute command
-            $parts = explode(' ', trim($command));
-            // This would need more sophisticated parsing for a full interactive mode
-            $output->writeln("Command: " . implode(' ', $parts));
-        }
-
-        $output->writeln('Goodbye!');
-        return Command::SUCCESS;
-    }
 
     private function getClient(): ?HueClient
     {
@@ -620,6 +607,46 @@ class HueCommand extends Command
         }
     }
 
+    private function sendSignal(InputInterface $input, OutputInterface $output): int
+    {
+        $type = $input->getArgument('target');
+        if (!$type) {
+            $output->writeln(
+                '<error>Usage: hue signal <attention|success|error|warning|working|off> [--light=Desk]</error>'
+            );
+            return Command::FAILURE;
+        }
+
+        $client = $this->getClient();
+        if (!$client) {
+            $output->writeln('<error>Not configured. Run "hue setup" first.</error>');
+            return Command::FAILURE;
+        }
+
+        $lights = $input->getOption('light') ?: null;
+        $restore = $input->getOption('restore');
+
+        if (!$client->signal()->send($type, $lights, $restore !== null ? (int) $restore : null)) {
+            $output->writeln('<comment>Signals are paused; nothing changed. Run "hue resume".</comment>');
+            return Command::SUCCESS;
+        }
+
+        $output->writeln("<info>Signal '{$type}' sent.</info>");
+        return Command::SUCCESS;
+    }
+
+    private function pauseSignals(InputInterface $input, OutputInterface $output): int
+    {
+        $minutes = $input->getArgument('target');
+        $signaler = new Signaler(null);
+        $signaler->pause($minutes !== null ? (int) $minutes * 60 : null);
+
+        $output->writeln($minutes !== null
+            ? "<info>Signals paused for {$minutes} minutes.</info>"
+            : '<info>Signals paused until "hue resume".</info>');
+        return Command::SUCCESS;
+    }
+
     private function showHelp(OutputInterface $output): void
     {
         $output->writeln("");
@@ -639,8 +666,10 @@ class HueCommand extends Command
         $output->writeln("  color [hex]              - Set color");
         $output->writeln("  scene activate           - Activate scene");
         $output->writeln("  effect [type]            - Run effect (party, sunrise, sunset, breathing)");
+        $output->writeln("  signal [type]            - attention, success, error, warning, working, off");
+        $output->writeln("  pause [minutes]          - Pause signals (also pauses claude-hue-notify)");
+        $output->writeln("  resume                   - Resume signals");
         $output->writeln("  server                   - Start REST API server");
-        $output->writeln("  interactive              - Enter interactive mode");
         $output->writeln("");
         $output->writeln("<info>Options:</info>");
         $output->writeln("  --all                    - Apply to all lights");
@@ -648,5 +677,7 @@ class HueCommand extends Command
         $output->writeln("  --brightness [0-100]     - Set brightness");
         $output->writeln("  --color [hex]            - Set color");
         $output->writeln("  --duration [seconds]     - Effect duration");
+        $output->writeln("  --light [name|id]        - Signal target, repeatable (default: notifier lamps)");
+        $output->writeln("  --restore [seconds]      - Signal: restore previous state afterwards");
     }
 }

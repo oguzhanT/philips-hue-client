@@ -13,6 +13,7 @@ use OguzhanTogay\HueClient\Resources\Schedules;
 use OguzhanTogay\HueClient\Resources\Events;
 use OguzhanTogay\HueClient\Resources\Sensors;
 use OguzhanTogay\HueClient\Retry\RetryHandler;
+use OguzhanTogay\HueClient\Signal\Signaler;
 use OguzhanTogay\HueClient\Cache\HueCache;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -33,6 +34,7 @@ class HueClient
     private ?Schedules $schedules = null;
     private ?Events $events = null;
     private ?Sensors $sensors = null;
+    private ?Signaler $signaler = null;
 
     public function __construct(
         string $bridgeIp,
@@ -220,6 +222,18 @@ class HueClient
             $this->schedules = new Schedules($this);
         }
         return $this->schedules;
+    }
+
+    /**
+     * Developer-notification states (attention, success, error, ...) on the
+     * notifier's lamps or the lights you name. See docs/signals.md.
+     */
+    public function signal(): Signaler
+    {
+        if ($this->signaler === null) {
+            $this->signaler = new Signaler($this);
+        }
+        return $this->signaler;
     }
 
     public function events(): Events
