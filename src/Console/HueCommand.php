@@ -638,6 +638,11 @@ class HueCommand extends Command
     private function pauseSignals(InputInterface $input, OutputInterface $output): int
     {
         $minutes = $input->getArgument('target');
+        if ($minutes !== null && (!ctype_digit((string) $minutes) || (int) $minutes === 0)) {
+            $output->writeln('<error>Usage: hue pause [minutes], minutes a whole number above 0</error>');
+            return Command::FAILURE;
+        }
+
         $signaler = new Signaler(null);
         $signaler->pause($minutes !== null ? (int) $minutes * 60 : null);
 

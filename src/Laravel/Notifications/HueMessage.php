@@ -59,7 +59,9 @@ class HueMessage
 
     /**
      * Put the lamps back after this many seconds. It blocks, so send the
-     * notification through the queue (ShouldQueue) when you use it.
+     * notification through the queue (ShouldQueue), and keep it well under the
+     * worker's timeout (60 s by default): a job killed mid-wait leaves the
+     * lamps in the signal state until the next signal on them restores it.
      */
     public function restoreAfter(int $seconds): self
     {

@@ -15,9 +15,17 @@ The PHP library (`$client->signal()`, `hue signal`), [claude-hue-notify](https:/
 
 `alert: none` is always sent so a new state cancels a running blink.
 
+claude-hue-notify switches the lamp off five seconds after `done`. The PHP library keeps `success` on until something else changes it; pass `restoreAfter` to put the previous state back instead.
+
+A lamp without color (white or white-ambiance) gets only `on`, `bri` and `alert` from a colored signal. Senders change every lamp they can and report the ones they could not, rather than stopping at the first failure.
+
+## Restoring
+
+A sender that restores the previous state saves it as `signal-restore-<light id>.json` next to the config file and deletes it after restoring. A signal that starts while such a file exists (and is less than ten minutes old) keeps the saved state instead of capturing the first signal's colors, so overlapping signals still end on the lamp's real state.
+
 ## Configuration file
 
-`~/.config/hue-notify/config.json` (override the path with `HUE_NOTIFY_CONFIG`):
+`~/.config/hue-notify/config.json` (override the path with `HUE_NOTIFY_CONFIG`; a leading `~/` is expanded):
 
 ```json
 {

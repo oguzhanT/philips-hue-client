@@ -117,17 +117,24 @@ class HueClient
         }
     }
 
+    /**
+     * @param array $options Guzzle request options, plus 'cache' => false to
+     *                       skip the read cache for this request
+     */
     public function request(string $method, string $endpoint, array $options = []): array
     {
         if (!$this->username) {
             throw new AuthenticationException('No username set. Please register first.');
         }
 
+        $useCache = $options['cache'] ?? true;
+        unset($options['cache']);
+
         $uri = "{$this->username}/{$endpoint}";
         $cacheKey = $method . '_' . $uri . '_' . md5(serialize($options));
 
         // Try cache for GET requests
-        if ($method === 'GET' && $this->cache) {
+        if ($method === 'GET' && $this->cache && $useCache) {
             $cachedData = $this->cache->get('api', $cacheKey);
             if ($cachedData !== null) {
                 return $cachedData;

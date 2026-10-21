@@ -2,6 +2,7 @@
 
 namespace OguzhanTogay\HueClient\Signal;
 
+use OguzhanTogay\HueClient\Exceptions\HueException;
 use OguzhanTogay\HueClient\HueClient;
 use OguzhanTogay\HueClient\Resources\Light;
 
@@ -20,6 +21,12 @@ class Signaler
     /** Light state fields worth putting back after a signal. */
     private const RESTORABLE = ['on', 'bri', 'hue', 'sat', 'ct', 'xy'];
 
+    /** What a lamp without color still understands. */
+    private const BASIC = ['on', 'bri', 'alert'];
+
+    /** A saved state older than this belongs to a signal that never finished. */
+    private const STALE_AFTER = 600;
+
     private string $notifierConfigPath;
 
     /**
@@ -29,16 +36,25 @@ class Signaler
      */
     public function __construct(private readonly ?HueClient $client, ?string $notifierConfigPath = null)
     {
-        $this->notifierConfigPath = $notifierConfigPath
-            ?? (getenv('HUE_NOTIFY_CONFIG') ?: self::home() . '/.config/hue-notify/config.json');
+        $path = $notifierConfigPath
+            ?? (getenv('HUE_NOTIFY_CONFIG') ?: '~/.config/hue-notify/config.json');
+
+        // Same as Python's expanduser in claude-hue-notify.
+        $this->notifierConfigPath = str_starts_with($path, '~/') ? self::home() . substr($path, 1) : $path;
     }
 
     /**
+     * Every lamp gets its turn even if another one fails, and with
+     * $restoreAfter every lamp that changed is put back. Failures are
+     * reported together at the end.
+     *
      * @param SignalType|string           $type         attention, success, error, warning, working, off
      *                                                  (or claude-hue-notify's waiting, done)
      * @param int|string|Light|array|null $lights       light ids, names or objects; null means the notifier's lamps
-     * @param int|null                    $restoreAfter seconds to wait before restoring the previous state (blocks)
+     * @param int|null                    $restoreAfter seconds before restoring the previous state; it blocks,
+     *                                                  so keep it under your queue worker's timeout
      * @return bool false when the notifier is paused and nothing was changed
+     * @throws HueException naming the lamps that could not be changed or restored
      */
     public function send(
         SignalType|string $type,
@@ -55,17 +71,39 @@ class Signaler
 
         $type = $type instanceof SignalType ? $type : SignalType::fromName($type);
         $ids = $this->resolve($lights);
-        $previous = $restoreAfter !== null ? $this->capture($ids) : [];
+        $errors = [];
+        $changed = [];
 
-        foreach ($ids as $id) {
-            $this->client->request('PUT', "lights/{$id}/state", ['json' => $type->state()]);
+        try {
+            foreach ($ids as $id) {
+                try {
+                    if ($restoreAfter !== null) {
+                        $this->rememberState($id);
+                    }
+                    $this->apply($id, $type->state());
+                    $changed[] = $id;
+                } catch (HueException $e) {
+                    $errors[] = "light {$id}: {$e->getMessage()}";
+                }
+            }
+
+            if ($restoreAfter !== null && $changed !== []) {
+                sleep(max(0, $restoreAfter));
+            }
+        } finally {
+            if ($restoreAfter !== null) {
+                foreach ($ids as $id) {
+                    try {
+                        $this->restoreState($id);
+                    } catch (HueException $e) {
+                        $errors[] = "light {$id} (restore): {$e->getMessage()}";
+                    }
+                }
+            }
         }
 
-        if ($restoreAfter !== null) {
-            sleep(max(0, $restoreAfter));
-            foreach ($previous as $id => $state) {
-                $this->client->request('PUT', "lights/{$id}/state", ['json' => $state + ['alert' => 'none']]);
-            }
+        if ($errors !== []) {
+            throw new HueException('Signal incomplete: ' . implode('; ', $errors));
         }
 
         return true;
@@ -95,11 +133,8 @@ class Signaler
      */
     public function pause(?int $seconds = null): void
     {
-        $path = $this->pausePath();
-        if (!is_dir(dirname($path))) {
-            mkdir(dirname($path), 0700, true);
-        }
-        file_put_contents($path, $seconds === null ? '' : (string) (time() + $seconds));
+        $this->ensureDirectory();
+        file_put_contents($this->pausePath(), $seconds === null ? '' : (string) (time() + $seconds));
     }
 
     public function resume(): void
@@ -113,6 +148,98 @@ class Signaler
     }
 
     /**
+     * Sends the state; a lamp without color refuses hue/sat, so it gets the
+     * parts it understands instead.
+     */
+    private function apply(string $id, array $state): void
+    {
+        try {
+            $this->client->request('PUT', "lights/{$id}/state", ['json' => $state]);
+        } catch (HueException $e) {
+            $basic = array_intersect_key($state, array_flip(self::BASIC));
+            if ($basic === $state || !$this->isUnsupportedParameter($e)) {
+                throw $e;
+            }
+            $this->client->request('PUT', "lights/{$id}/state", ['json' => $basic]);
+        }
+    }
+
+    private function isUnsupportedParameter(HueException $e): bool
+    {
+        $message = strtolower($e->getMessage());
+
+        return str_contains($message, 'not available') || str_contains($message, 'not modifiable');
+    }
+
+    /**
+     * Saves the lamp's state before the signal, unless an earlier signal that
+     * has not been restored yet already did: then its state is the real one.
+     */
+    private function rememberState(string $id): void
+    {
+        $file = $this->stateFile($id);
+        if (is_file($file) && time() - (int) filemtime($file) < self::STALE_AFTER) {
+            return;
+        }
+
+        $state = $this->client->request('GET', "lights/{$id}", ['cache' => false])['state'] ?? [];
+        $this->ensureDirectory();
+        file_put_contents($file, (string) json_encode(self::restorable($state)));
+    }
+
+    private function restoreState(string $id): void
+    {
+        $file = $this->stateFile($id);
+        if (!is_file($file)) {
+            return;
+        }
+
+        $state = json_decode((string) file_get_contents($file), true);
+        @unlink($file);
+
+        if (is_array($state) && $state !== []) {
+            $this->apply($id, $state + ['alert' => 'none']);
+        }
+    }
+
+    /**
+     * Only the color the lamp was actually showing; a lamp that was off is
+     * just switched off again (the bridge refuses color for a lamp that is off).
+     */
+    private static function restorable(array $state): array
+    {
+        if (($state['on'] ?? true) === false) {
+            return ['on' => false];
+        }
+
+        $restore = array_intersect_key($state, array_flip(self::RESTORABLE));
+
+        match ($state['colormode'] ?? null) {
+            'ct' => $restore = array_diff_key($restore, array_flip(['hue', 'sat', 'xy'])),
+            'xy' => $restore = array_diff_key($restore, array_flip(['hue', 'sat', 'ct'])),
+            'hs' => $restore = array_diff_key($restore, array_flip(['xy', 'ct'])),
+            default => null,
+        };
+
+        return $restore;
+    }
+
+    private function stateFile(string $id): string
+    {
+        $safeId = preg_replace('/[^A-Za-z0-9_-]/', '', $id);
+
+        return dirname($this->notifierConfigPath) . "/signal-restore-{$safeId}.json";
+    }
+
+    private function ensureDirectory(): void
+    {
+        $dir = dirname($this->notifierConfigPath);
+        if (!is_dir($dir)) {
+            mkdir($dir, 0700, true);
+        }
+    }
+
+    /**
      * @return string[] light ids
      */
     private function resolve(int|string|Light|array|null $lights): array
@@ -123,11 +250,15 @@ class Signaler
 
         $ids = [];
         foreach (is_array($lights) ? $lights : [$lights] as $light) {
-            $ids[] = match (true) {
-                $light instanceof Light => (string) $light->getId(),
-                is_int($light), ctype_digit((string) $light) => (string) $light,
-                default => (string) $this->client->lights()->getByName($light)->getId(),
-            };
+            if ($light instanceof Light) {
+                $ids[] = (string) $light->getId();
+            } elseif (is_int($light) || ctype_digit((string) $light)) {
+                $ids[] = (string) $light;
+            } else {
+                $found = $this->client->lights()->getByName((string) $light)
+                    ?? throw new \InvalidArgumentException("Unknown light '{$light}'.");
+                $ids[] = (string) $found->getId();
+            }
         }
 
         return array_values(array_unique($ids));
@@ -155,35 +286,6 @@ class Signaler
         }
 
         return array_map('strval', $ids);
-    }
-
-    /**
-     * @param string[] $ids
-     * @return array<string, array> restorable state per light
-     */
-    private function capture(array $ids): array
-    {
-        $states = [];
-        foreach ($ids as $id) {
-            $state = $this->client->request('GET', "lights/{$id}")['state'] ?? [];
-            $restore = array_intersect_key($state, array_flip(self::RESTORABLE));
-
-            // Restore only the color the lamp was actually showing.
-            $mode = $state['colormode'] ?? null;
-            if ($mode === 'ct') {
-                unset($restore['hue'], $restore['sat'], $restore['xy']);
-            } elseif ($mode === 'xy') {
-                unset($restore['hue'], $restore['sat'], $restore['ct']);
-            } elseif ($mode === 'hs') {
-                unset($restore['xy'], $restore['ct']);
-            }
-
-            // A lamp that was off only needs switching off again; the bridge
-            // refuses color changes for a lamp that is off.
-            $states[$id] = ($state['on'] ?? true) === false ? ['on' => false] : $restore;
-        }
-
-        return $states;
     }
 
     private static function home(): string

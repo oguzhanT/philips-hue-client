@@ -3,6 +3,7 @@
 namespace OguzhanTogay\HueClient\Tests\Signal;
 
 use Mockery;
+use OguzhanTogay\HueClient\Exceptions\HueException;
 use OguzhanTogay\HueClient\HueClient;
 use OguzhanTogay\HueClient\Laravel\Notifications\HueChannel;
 use OguzhanTogay\HueClient\Laravel\Notifications\HueMessage;
@@ -23,19 +24,31 @@ class SignalerTest extends TestCase
         mkdir($this->dir);
         file_put_contents($this->dir . '/config.json', json_encode(['light_id' => '7', 'light_ids' => ['1', '7']]));
 
-        $this->client = Mockery::mock(HueClient::class);
-        $this->client->shouldReceive('request')->andReturnUsing(function (string $method, string $path, array $options = []) {
+        $this->client = $this->fakeClient();
+    }
+
+    /**
+     * @param callable(string, string, array): void|null $fail throws to make a request fail
+     */
+    private function fakeClient(?callable $fail = null): HueClient
+    {
+        $client = Mockery::mock(HueClient::class);
+        $client->shouldReceive('request')->andReturnUsing(function (string $method, string $path, array $options = []) use ($fail) {
             $this->requests[] = [$method, $path, $options['json'] ?? []];
+            if ($fail) {
+                $fail($method, $path, $options['json'] ?? []);
+            }
             return $method === 'GET'
                 ? ['state' => ['on' => true, 'bri' => 80, 'ct' => 300, 'hue' => 1, 'sat' => 2, 'xy' => [0.4, 0.4], 'colormode' => 'ct']]
                 : [];
         });
+
+        return $client;
     }
 
     protected function tearDown(): void
     {
-        @unlink($this->dir . '/paused');
-        @unlink($this->dir . '/config.json');
+        array_map('unlink', glob($this->dir . '/*') ?: []);
         @rmdir($this->dir);
         Mockery::close();
     }
@@ -90,6 +103,72 @@ class SignalerTest extends TestCase
         $this->assertSame(['GET', 'lights/1'], [$get[0], $get[1]]);
         $this->assertSame(SignalType::Error->state(), $put[2]);
         $this->assertSame(['on' => true, 'bri' => 80, 'ct' => 300, 'alert' => 'none'], $restore[2]);
+        $this->assertSame([], glob($this->dir . '/signal-restore-*'), 'saved state is cleaned up');
+    }
+
+    public function testOneFailingLampDoesNotStopTheOthersOrTheRestore(): void
+    {
+        $this->client = $this->fakeClient(function (string $method, string $path, array $body): void {
+            if ($method === 'PUT' && $path === 'lights/2/state') {
+                throw new HueException('device is unreachable');
+            }
+        });
+
+        try {
+            $this->signaler()->send('error', [1, 2, 3], restoreAfter: 0);
+            $this->fail('Expected the failure to be reported');
+        } catch (HueException $e) {
+            $this->assertStringContainsString('light 2', $e->getMessage());
+        }
+
+        $puts = array_values(array_filter($this->requests, static fn ($r) => $r[0] === 'PUT'));
+        $this->assertContains('lights/3/state', array_column($puts, 1), 'lamp 3 still got the signal');
+        $restored = array_filter($puts, static fn ($r) => ($r[2]['ct'] ?? null) === 300);
+        $this->assertCount(3, $restored, 'every lamp was restored, the failed one included');
+    }
+
+    public function testALampWithoutColorGetsWhatItUnderstands(): void
+    {
+        $this->client = $this->fakeClient(function (string $method, string $path, array $body): void {
+            if ($method === 'PUT' && isset($body['hue'])) {
+                throw new HueException('parameter, hue, is not available');
+            }
+        });
+
+        $this->assertTrue($this->signaler()->send('success', 4));
+        $this->assertSame(['on' => true, 'bri' => 254, 'alert' => 'none'], end($this->requests)[2]);
+    }
+
+    public function testAnEarlierUnfinishedSignalKeepsTheRealState(): void
+    {
+        file_put_contents($this->dir . '/signal-restore-1.json', json_encode(['on' => false]));
+
+        $this->signaler()->send('error', 1, restoreAfter: 0);
+
+        $this->assertNotContains('GET', array_column($this->requests, 0), 'no new capture');
+        $this->assertSame(['on' => false, 'alert' => 'none'], end($this->requests)[2]);
+    }
+
+    public function testUnknownLightNamesAreReported(): void
+    {
+        $this->client->shouldReceive('lights->getByName')->with('Nowhere')->andReturnNull();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage("Unknown light 'Nowhere'");
+        $this->signaler()->send('error', 'Nowhere');
+    }
+
+    public function testExpandsTildeInTheConfigPath(): void
+    {
+        putenv('HUE_NOTIFY_CONFIG=~/somewhere/config.json');
+        try {
+            $path = (new Signaler(null))->pausePath();
+        } finally {
+            putenv('HUE_NOTIFY_CONFIG');
+        }
+
+        $this->assertStringStartsNotWith('~', $path);
+        $this->assertStringEndsWith('/somewhere/paused', $path);
     }
 
     public function testLaravelChannelUsesMessageThenRoute(): void
