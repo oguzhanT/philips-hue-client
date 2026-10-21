@@ -25,11 +25,16 @@ class HueCommand extends Command
     private ?HueClient $client = null;
     private array $config = [];
     private string $configFile;
+    private string $legacyConfigFile;
 
     public function __construct()
     {
         parent::__construct('hue:command');
-        $this->configFile = $_SERVER['HOME'] . '/.hue-config.json';
+        // The config shared with claude-hue-notify and HueBar (docs/signals.md).
+        $home = getenv('HOME') ?: ($_SERVER['HOME'] ?? '');
+        $shared = getenv('HUE_NOTIFY_CONFIG') ?: '~/.config/hue-notify/config.json';
+        $this->configFile = str_starts_with($shared, '~/') ? $home . substr($shared, 1) : $shared;
+        $this->legacyConfigFile = $home . '/.hue-config.json';
         $this->loadConfig();
     }
 
@@ -493,21 +498,51 @@ class HueCommand extends Command
         return $this->client;
     }
 
+    /**
+     * The shared config calls the bridge username "token"; before 2.3 this CLI
+     * kept its own ~/.hue-config.json, which is still read when the shared
+     * file does not exist (and migrated on the next save).
+     */
     private function loadConfig(): void
     {
-        if (file_exists($this->configFile)) {
-            $content = file_get_contents($this->configFile);
-            $this->config = json_decode($content, true) ?? [];
+        $file = file_exists($this->configFile) ? $this->configFile : $this->legacyConfigFile;
+        if (!file_exists($file)) {
+            return;
+        }
+
+        $this->config = json_decode((string) file_get_contents($file), true) ?? [];
+        if (!isset($this->config['username']) && isset($this->config['token'])) {
+            $this->config['username'] = $this->config['token'];
         }
     }
 
+    /**
+     * Merges into the shared file so keys other tools own (light_ids,
+     * project_lights, ...) survive, and writes it owner-only and atomically.
+     */
     private function saveConfig(): void
     {
-        // The file holds the bridge token: create it readable by the owner only.
+        $existing = file_exists($this->configFile)
+            ? (json_decode((string) file_get_contents($this->configFile), true) ?? [])
+            : [];
+
+        $data = array_merge($existing, $this->config);
+        if (isset($data['username'])) {
+            $data['token'] = $data['username'];
+            unset($data['username']);
+        }
+
+        $directory = dirname($this->configFile);
+        if (!is_dir($directory)) {
+            mkdir($directory, 0700, true);
+        }
+
         $old = umask(0077);
-        file_put_contents($this->configFile, json_encode($this->config, JSON_PRETTY_PRINT));
+        $temporary = $this->configFile . '.' . getmypid() . '.tmp';
+        file_put_contents($temporary, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) . "\n");
         umask($old);
-        @chmod($this->configFile, 0600);
+        @chmod($temporary, 0600);
+        rename($temporary, $this->configFile);
     }
 
     private function startServer(InputInterface $input, OutputInterface $output): int

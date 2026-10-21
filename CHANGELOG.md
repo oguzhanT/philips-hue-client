@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.3.0] - 2026-10-21
+
+### Changed
+- **The CLI uses the shared config** (`~/.config/hue-notify/config.json`, or `HUE_NOTIFY_CONFIG`): pair once with claude-hue-notify or `hue setup`, and the CLI, the notifier and HueBar all use it. `~/.hue-config.json` is still read when the shared file does not exist and migrated on the next save. Saves merge into the file, so other tools' keys (`light_ids`, `project_lights`) survive, and are atomic and owner-only.
+- The Composer package no longer ships tests, examples, Docker files or CI config.
+- The README says what the project is: an independent client for Philips Hue, not affiliated with Signify.
+
+### Removed
+- `bin/hue-cli`, `bin/hue-enhanced`, `bin/hue-fixed`: old copies of the CLI that were never registered as package binaries.
+
+
 ## [2.2.0] - 2026-10-21
 
 ### Security
