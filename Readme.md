@@ -1,4 +1,6 @@
-# Philips Hue Client for PHP
+# PHP client for Philips Hue
+
+*An independent open-source project, not affiliated with or endorsed by Signify (Philips Hue).*
 
 [![Latest Version on Packagist](https://img.shields.io/packagist/v/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
 [![Total Downloads](https://img.shields.io/packagist/dt/oguzhantogay/philips-hue-client.svg?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
@@ -289,7 +291,8 @@ composer global require oguzhantogay/philips-hue-client
 # Discover bridges
 hue discover
 
-# Setup/authenticate
+# Setup/authenticate (shares ~/.config/hue-notify/config.json with claude-hue-notify:
+# already paired there? the CLI just works)
 hue setup
 
 # Lights, rooms, sensors, schedules
