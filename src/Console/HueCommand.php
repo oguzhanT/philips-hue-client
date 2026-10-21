@@ -96,6 +96,8 @@ class HueCommand extends Command
                     return $this->sendSignal($input, $output);
                 case 'pause':
                     return $this->pauseSignals($input, $output);
+                case 'events':
+                    return $this->watchEvents($input, $output);
                 case 'resume':
                     (new Signaler(null))->resume();
                     $output->writeln('<info>Signals resumed.</info>');
@@ -635,6 +637,35 @@ class HueCommand extends Command
         return Command::SUCCESS;
     }
 
+    private function watchEvents(InputInterface $input, OutputInterface $output): int
+    {
+        $client = $this->getClient();
+        if (!$client) {
+            $output->writeln('<error>Not configured. Run "hue setup" first.</error>');
+            return Command::FAILURE;
+        }
+
+        $seconds = $input->getOption('duration') !== '30' ? (float) $input->getOption('duration') : null;
+        $output->writeln('<info>Listening to the bridge (CLIP v2 event stream). Ctrl+C to stop.</info>');
+
+        $client->v2()->events()->listen(function (array $event) use ($output): bool {
+            foreach ($event['data'] ?? [] as $change) {
+                $fields = array_diff_key($change, array_flip(['id', 'id_v1', 'type', 'owner']));
+                $output->writeln(sprintf(
+                    '%s  %-6s %-14s %s  %s',
+                    date('H:i:s'),
+                    $event['type'] ?? '?',
+                    $change['type'] ?? '?',
+                    $change['id_v1'] ?? $change['id'] ?? '',
+                    json_encode($fields)
+                ));
+            }
+            return true;
+        }, $seconds);
+
+        return Command::SUCCESS;
+    }
+
     private function pauseSignals(InputInterface $input, OutputInterface $output): int
     {
         $minutes = $input->getArgument('target');
@@ -672,6 +703,7 @@ class HueCommand extends Command
         $output->writeln("  scene activate           - Activate scene");
         $output->writeln("  effect [type]            - Run effect (party, sunrise, sunset, breathing)");
         $output->writeln("  signal [type]            - attention, success, error, warning, working, off");
+        $output->writeln("  events                   - Watch changes live (--duration to stop after N seconds)");
         $output->writeln("  pause [minutes]          - Pause signals (also pauses claude-hue-notify)");
         $output->writeln("  resume                   - Resume signals");
         $output->writeln("  server                   - Start REST API server");

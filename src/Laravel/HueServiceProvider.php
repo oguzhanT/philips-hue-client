@@ -47,6 +47,11 @@ class HueServiceProvider extends ServiceProvider
             );
         });
 
+        // The same bridge through CLIP v2
+        $this->app->singleton(\OguzhanTogay\HueClient\V2\HueV2Client::class, function (Application $app) {
+            return $app->make(HueClient::class)->v2();
+        });
+
         // Register Connection Pool for multiple bridges
         $this->app->singleton(ConnectionPool::class, function (Application $app) {
             $config = $app['config']['hue'];

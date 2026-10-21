@@ -1,6 +1,6 @@
 {
     "name": "oguzhantogay/philips-hue-client",
-    "description": "A modern, fully-featured PHP client for Philips Hue smart lights",
+    "description": "A PHP client for Philips Hue: v1 and CLIP v2 APIs, real-time events, signals, CLI, REST server, Laravel and Symfony",
     "type": "library",
     "license": "MIT",
     "keywords": [
@@ -43,7 +43,8 @@
         "symfony/cache": "Caches bridge reads (HueClient cache_enabled) and REST responses",
         "symfony/rate-limiter": "Rate limits the REST API per client",
         "ext-redis": "Redis cache adapter (cache_type: redis)",
-        "zircote/swagger-php": "Serves the OpenAPI document at /api/docs"
+        "zircote/swagger-php": "Serves the OpenAPI document at /api/docs",
+        "ext-sockets": "Local bridge discovery over mDNS, without internet"
     },
     "autoload": {
         "psr-4": {

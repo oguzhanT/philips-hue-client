@@ -26,7 +26,7 @@ require_once $autoloadFile;
 use OguzhanTogay\HueClient\Console\HueCommand;
 use Symfony\Component\Console\Application;
 
-$application = new Application('Philips Hue CLI', '1.0.0');
+$application = new Application('Philips Hue CLI', '2.0.0');
 $application->add(new HueCommand());
 $application->setDefaultCommand('hue:command', true);
 $application->run();

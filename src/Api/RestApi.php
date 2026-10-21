@@ -22,7 +22,7 @@ use OguzhanTogay\HueClient\Api\Controllers\BridgeController;
 /**
  * @OA\Info(
  *     title="Philips Hue REST API",
- *     version="1.0.0",
+ *     version="2.0.0",
  *     description="REST API for controlling Philips Hue lights, rooms, scenes, and more",
  *     @OA\Contact(
  *         email="oguzhan.togay@rgbilisim.com",

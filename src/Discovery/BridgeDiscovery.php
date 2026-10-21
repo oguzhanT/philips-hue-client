@@ -8,7 +8,8 @@ use OguzhanTogay\HueClient\Exceptions\HueException;
 class BridgeDiscovery
 {
     private Client $httpClient;
-    private array $discoveryMethods = ['nupnp', 'mdns', 'ssdp'];
+    /** Local multicast DNS first: it needs no internet and no Philips account. */
+    private array $discoveryMethods = ['mdns', 'nupnp'];
 
     public function __construct()
     {
@@ -36,9 +37,11 @@ class BridgeDiscovery
         $seenIds = [];
 
         foreach ($bridges as $bridge) {
-            if (!in_array($bridge->getId(), $seenIds)) {
+            // mDNS and the discovery service spell the same id in different cases.
+            $id = strtolower($bridge->getId());
+            if (!in_array($id, $seenIds, true)) {
                 $uniqueBridges[] = $bridge;
-                $seenIds[] = $bridge->getId();
+                $seenIds[] = $id;
             }
         }
 
@@ -70,18 +73,7 @@ class BridgeDiscovery
 
     private function discoverMdns(): array
     {
-        // mDNS discovery implementation
-        // This would require additional libraries for mDNS/Bonjour discovery
-        // For now, returning empty array
-        return [];
-    }
-
-    private function discoverSsdp(): array
-    {
-        // SSDP discovery implementation
-        // This would require socket programming for SSDP/UPnP discovery
-        // For now, returning empty array
-        return [];
+        return (new MdnsDiscovery())->discover();
     }
 
     public function discoverByIp(string $ip): ?Bridge
