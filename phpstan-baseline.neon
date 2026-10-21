@@ -1,6 +1,1 @@
-parameters:
-	ignoreErrors:
-		-
-			message: "#^Property OguzhanTogay\\\\HueClient\\\\Resources\\\\Events\\:\\:\\$client is never read, only written\\.$#"
-			count: 1
-			path: src/Resources/Events.php
+parameters: {}

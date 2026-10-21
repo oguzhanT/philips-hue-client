@@ -10,10 +10,10 @@ use OguzhanTogay\HueClient\Resources\Lights;
 use OguzhanTogay\HueClient\Resources\Groups;
 use OguzhanTogay\HueClient\Resources\Scenes;
 use OguzhanTogay\HueClient\Resources\Schedules;
-use OguzhanTogay\HueClient\Resources\Events;
 use OguzhanTogay\HueClient\Resources\Sensors;
 use OguzhanTogay\HueClient\Retry\RetryHandler;
 use OguzhanTogay\HueClient\Signal\Signaler;
+use OguzhanTogay\HueClient\V2\HueV2Client;
 use OguzhanTogay\HueClient\Cache\HueCache;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
@@ -32,7 +32,6 @@ class HueClient
     private ?Groups $groups = null;
     private ?Scenes $scenes = null;
     private ?Schedules $schedules = null;
-    private ?Events $events = null;
     private ?Sensors $sensors = null;
     private ?Signaler $signaler = null;
 
@@ -243,12 +242,17 @@ class HueClient
         return $this->signaler;
     }
 
-    public function events(): Events
+    /**
+     * The same bridge through its CLIP v2 API: real-time events, effects,
+     * gradients, scenes by room. The application key is this client's username.
+     */
+    public function v2(array $options = []): HueV2Client
     {
-        if ($this->events === null) {
-            $this->events = new Events($this);
+        if (!$this->username) {
+            throw new AuthenticationException('No username set. Please register first.');
         }
-        return $this->events;
+
+        return new HueV2Client($this->bridgeIp, $this->username, $options + ['verify' => $this->config['verify']]);
     }
 
     public function sensors(): Sensors

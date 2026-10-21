@@ -14,12 +14,15 @@
 
 A PHP client for Philips Hue smart lights. Control lights, rooms, scenes, and schedules with a fluent API, from plain PHP, Laravel, or Symfony, or from the command line.
 
-> It talks to the bridge's **v1 (classic) API**. CLIP v2 support is planned; see [Known limitations and roadmap](#-known-limitations-and-roadmap).
+It speaks both bridge APIs: the classic **v1** API through `HueClient`, and **CLIP v2** (real-time events, effects, gamut-aware colors) through `HueV2Client` or `$client->v2()`.
 
 ## ✨ Features
 
 - 💡 **Lights, groups, scenes, schedules, sensors** - Hue v1 API, with a fluent interface for chaining
-- 🔍 **Bridge discovery** - Finds bridges through Philips' N-UPnP discovery service (internet required)
+- 🆕 **CLIP v2** - Lights, rooms, zones, scenes, devices; effects like candle and fire; colors fitted to each lamp's gamut
+- ⚡ **Real-time events** - The bridge's v2 event stream, in PHP and as `hue events`
+- 🔔 **Signals** - Lamps as build, deploy and agent notifications, shared with claude-hue-notify
+- 🔍 **Bridge discovery** - Local mDNS (no internet needed), then Philips' discovery service
 - 🎭 **Effects** - Color loop, breathing, alert flashes, and frame animations
 - 🛠️ **CLI tool** - `hue` for quick control from the terminal
 - 🌐 **REST API server** - HTTP endpoints over the client, for trusted local networks
@@ -35,6 +38,7 @@ A PHP client for Philips Hue smart lights. Control lights, rooms, scenes, and sc
 - Philips Hue Bridge (the square v2 bridge)
 - Network access to the bridge
 - ext-json
+- ext-sockets (optional, for local mDNS discovery)
 
 ## 🚀 Installation
 
@@ -204,6 +208,33 @@ $client->schedules()->once('New Year', $command, '2026-12-31 23:00:00');
 $client->schedules()->atSunset($command);
 ```
 
+### CLIP v2: events, effects and rooms
+
+```php
+use OguzhanTogay\HueClient\V2\HueV2Client;
+
+$hue = new HueV2Client($bridgeIp, $username);   // or $client->v2()
+
+$desk = $hue->lights()->byName('Desk');
+$desk->on()->color('#FF5733')->setBrightness(60);     // color fitted to the lamp's gamut
+$desk->colorTemperature(2700, transitionMs: 2000);
+$desk->effect('candle');                               // see $desk->effects()
+$desk->identify();                                      // breathe once
+
+$hue->rooms()->byName('Office')->groupedLight()->off(transitionMs: 1000);
+$hue->scenes()->byName('Relax')->recall(dynamic: true);
+
+// Real time: every change on the bridge as it happens
+$hue->events()->listen(function (array $event) {
+    foreach ($event['data'] as $change) {
+        echo "{$event['type']} {$change['type']} {$change['id']}\n";
+    }
+    return true; // false stops listening
+}, seconds: 60);
+```
+
+Other resource types (motion, temperature, button, ...) are available as `$hue->resources('motion')->all()`.
+
 ### Signals: lamps as developer notifications
 
 Show a build, deploy or agent state on a lamp. The colors, the lamps and the pause switch are shared with [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) and [HueBar](#-macos-menu-bar-app); see [docs/signals.md](docs/signals.md).
@@ -280,6 +311,10 @@ hue signal success                    # notifier lamps
 hue signal error --light=Desk --light=3 --restore=10
 hue pause 60                          # minutes; no argument = until resume
 hue resume
+
+# Watch the bridge live (CLIP v2 event stream)
+hue events
+hue events --duration=60
 
 # Effects (they run in the foreground for --duration seconds)
 hue effect party --duration=30
@@ -756,17 +791,12 @@ $hue = new \OguzhanTogay\HueClient\HueClient(
 
 ## 🚧 Known limitations and roadmap
 
-What the library does not do yet, so you are not surprised:
-
-- **Hue API v1 only.** Gradient lights, the bridge's own effects (candle, fire, sparkle), dynamic scenes and entertainment areas need CLIP v2.
-- **No real-time events.** `$client->events()` is a placeholder; there is no event stream yet.
-- **Discovery needs the internet.** Only Philips' N-UPnP service is used; local mDNS discovery is not implemented.
-- **Effects block** the PHP process while they run.
+- **Effects block** the PHP process while they run (the v1 `Effects` classes). The v2 `effect()` runs on the bridge instead.
 - **Caching and rate limiting** are off unless `symfony/cache` and `symfony/rate-limiter` are installed.
+- **TLS is not verified by default**: the bridge's certificate is signed by Philips' own CA. Pass that CA's path as `verify` to check it.
+- **Entertainment areas** (DTLS streaming) are not supported.
 
-Planned, roughly in this order:
-
-1. CLIP v2 with event stream and mDNS discovery (2.0)
+Next on the list: an MCP server in [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) so Claude can control the lights, and webhook profiles (GitHub Actions, Sentry) for signals.
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
