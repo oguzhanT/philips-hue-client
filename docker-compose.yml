@@ -13,6 +13,7 @@ services:
       - HUE_SENTRY_WEBHOOK_SECRET=${HUE_SENTRY_WEBHOOK_SECRET:-}
       - HUE_WEBHOOK_LIGHTS=${HUE_WEBHOOK_LIGHTS:-}
       - HUE_GITHUB_BRANCHES=${HUE_GITHUB_BRANCHES:-}
+      - HUE_WEBHOOK_STATE_DIR=${HUE_WEBHOOK_STATE_DIR:-}
     volumes:
       - ./:/var/www
     networks:

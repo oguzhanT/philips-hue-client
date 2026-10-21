@@ -2,6 +2,7 @@
 
 namespace OguzhanTogay\HueClient\Api\Controllers;
 
+use OguzhanTogay\HueClient\Api\Webhooks\DeliveryLog;
 use OguzhanTogay\HueClient\Api\Webhooks\WebhookSignals;
 use OguzhanTogay\HueClient\HueClient;
 use OguzhanTogay\HueClient\Signal\SignalType;
@@ -15,12 +16,16 @@ use Psr\Http\Message\ServerRequestInterface as Request;
  */
 class WebhookController extends BaseController
 {
+    private DeliveryLog $deliveries;
+
     /**
-     * @param array{github_secret?: ?string, sentry_secret?: ?string, lights?: string[], branches?: string[]} $options
+     * @param array{github_secret?: ?string, sentry_secret?: ?string, lights?: string[], branches?: string[],
+     *              state_dir?: ?string} $options
      */
     public function __construct(HueClient $hueClient, private readonly array $options = [])
     {
         parent::__construct($hueClient);
+        $this->deliveries = new DeliveryLog($options['state_dir'] ?? null);
     }
 
     public function github(Request $request, Response $response): Response
@@ -33,6 +38,15 @@ class WebhookController extends BaseController
         $body = (string) $request->getBody();
         if (!WebhookSignals::verifyGithub($body, $request->getHeaderLine('X-Hub-Signature-256'), $secret)) {
             return $this->errorResponse($response, 'Invalid signature.', 401);
+        }
+
+        try {
+            $replay = $this->isReplay('github', $body);
+        } catch (\RuntimeException $e) {
+            return $this->errorResponse($response, $e->getMessage(), 503);
+        }
+        if ($replay) {
+            return $this->successResponse($response, ['signal' => null], 'Duplicate delivery ignored');
         }
 
         $event = $request->getHeaderLine('X-GitHub-Event');
@@ -55,6 +69,15 @@ class WebhookController extends BaseController
         $body = (string) $request->getBody();
         if (!WebhookSignals::verifySentry($body, $request->getHeaderLine('Sentry-Hook-Signature'), $secret)) {
             return $this->errorResponse($response, 'Invalid signature.', 401);
+        }
+
+        try {
+            $replay = $this->isReplay('sentry', $body);
+        } catch (\RuntimeException $e) {
+            return $this->errorResponse($response, $e->getMessage(), 503);
+        }
+        if ($replay) {
+            return $this->successResponse($response, ['signal' => null], 'Duplicate delivery ignored');
         }
 
         $resource = $request->getHeaderLine('Sentry-Hook-Resource');
@@ -82,6 +105,15 @@ class WebhookController extends BaseController
             ['signal' => $signal->value, 'paused' => !$shown],
             $shown ? "Showed {$signal->value} for {$what}" : 'Signals are paused'
         );
+    }
+
+    /**
+     * Called only after the signature checked out, with the body it covers.
+     * A replay is answered with 200 so the sender does not retry it.
+     */
+    private function isReplay(string $source, string $signedBody): bool
+    {
+        return $this->deliveries->seenBefore($source, $signedBody);
     }
 
     private function decode(string $body): array

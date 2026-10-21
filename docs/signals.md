@@ -34,12 +34,14 @@ Every sender that changes a lamp without restoring it (claude-hue-notify, its MC
   "bridge_ip": "192.168.1.2",
   "token": "<bridge username>",
   "light_id": "7",
-  "light_ids": ["7", "12"]
+  "light_ids": ["7", "12"],
+  "pinned_public_key": "sha256//tz8h303qMvOC…"
 }
 ```
 
 - `light_ids` are the notifier's lamps. When it is missing or empty, `light_id` is the only lamp. Writers keep `light_id` equal to the first entry for older readers.
 - The file holds the bridge token: create it readable by its owner only (0600), and keep it so when rewriting it.
+- `pinned_public_key` is `sha256//` + base64 of the SHA-256 of the certificate's SubjectPublicKeyInfo, the format curl's `CURLOPT_PINNEDPUBLICKEY` takes; a renewed certificate with the same key keeps it. Every reader (the PHP library, claude-hue-notify, its MCP server, HueBar) talks to the bridge over HTTPS and refuses to send the token to any other key. With no pin yet, the first key seen is pinned and written back (trust on first use), but only if no other process pinned meanwhile; a different pin on disk is a mismatch, never overwritten.
 
 ## Pause file
 
