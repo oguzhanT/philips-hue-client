@@ -16,106 +16,114 @@ foreach ($autoloadFiles as $file) {
 }
 
 if (!$autoloadFile) {
-    echo "Autoload file not found.\n";
+    fwrite(STDERR, "Autoload file not found.\n");
     exit(1);
 }
 
 require_once $autoloadFile;
 
 use OguzhanTogay\HueClient\HueClient;
-use OguzhanTogay\HueClient\Api\RestApi;
 use OguzhanTogay\HueClient\Discovery\BridgeDiscovery;
 
-// Parse command line arguments
-$options = getopt('h:u:p:d', ['help', 'host:', 'username:', 'port:', 'discover']);
+$options = getopt('h:u:p:b:dk:', [
+    'help', 'host:', 'username:', 'port:', 'bind:', 'discover', 'api-key:', 'insecure', 'cors:',
+]);
 
 if (isset($options['help'])) {
-    echo "Philips Hue REST API Server\n\n";
-    echo "Usage: hue-server [OPTIONS]\n\n";
-    echo "Options:\n";
-    echo "  -h, --host       Bridge IP address\n";
-    echo "  -u, --username   Hue username\n";
-    echo "  -p, --port       Server port (default: 8080)\n";
-    echo "  -d, --discover   Auto-discover bridge\n";
-    echo "  --help           Show this help message\n\n";
-    echo "Environment Variables:\n";
-    echo "  HUE_BRIDGE_IP    Bridge IP address\n";
-    echo "  HUE_USERNAME     Hue username\n";
-    echo "  HUE_PORT         Server port\n\n";
-    echo "Examples:\n";
-    echo "  hue-server -h 192.168.1.100 -u your-username\n";
-    echo "  hue-server --discover\n";
-    echo "  HUE_BRIDGE_IP=192.168.1.100 HUE_USERNAME=username hue-server\n";
+    echo <<<HELP
+    Philips Hue REST API Server
+
+    Usage: hue-server [OPTIONS]
+
+    Options:
+      -h, --host       Bridge IP address              (HUE_BRIDGE_IP)
+      -u, --username   Bridge username / app key      (HUE_USERNAME)
+      -p, --port       Port to listen on, default 8080 (HUE_PORT)
+      -b, --bind       Address to listen on, default 127.0.0.1 (HUE_BIND)
+      -k, --api-key    Key clients must send          (HUE_API_KEY)
+          --insecure   Run without an API key — trusted networks only (HUE_API_INSECURE=1)
+          --cors       Comma-separated browser origins allowed to call the API (HUE_CORS_ORIGINS)
+      -d, --discover   Find the bridge through Philips' discovery service
+          --help       Show this help
+
+    Clients send the key as "Authorization: Bearer <key>" or "X-API-Key: <key>".
+    /api/health and /docs need no key.
+
+    Examples:
+      hue-server -h 192.168.1.100 -u <username> -k "\$(openssl rand -hex 24)"
+      HUE_BRIDGE_IP=192.168.1.100 HUE_USERNAME=<username> HUE_API_KEY=<key> hue-server --bind 0.0.0.0
+
+    HELP;
     exit(0);
 }
 
-// Configuration
-$bridgeIp = $options['h'] ?? $options['host'] ?? $_ENV['HUE_BRIDGE_IP'] ?? null;
-$username = $options['u'] ?? $options['username'] ?? $_ENV['HUE_USERNAME'] ?? null;
-$port = $options['p'] ?? $options['port'] ?? $_ENV['HUE_PORT'] ?? 8080;
-$autoDiscover = isset($options['d']) || isset($options['discover']);
+$env = static fn (string $name): ?string => (getenv($name) !== false && getenv($name) !== '') ? getenv($name) : null;
 
-// Auto-discover bridge if requested or no IP provided
-if ($autoDiscover || !$bridgeIp) {
-    echo "🔍 Auto-discovering Hue Bridge...\n";
-    $discovery = new BridgeDiscovery();
-    $bridges = $discovery->discover();
-    
-    if (!empty($bridges)) {
-        $bridgeIp = $bridges[0]->getIp();
-        echo "✅ Found bridge at: {$bridgeIp}\n";
-    } else {
-        echo "❌ No Hue bridges found on network\n";
-        echo "💡 Make sure your bridge is connected and try again\n";
+$bridgeIp = $options['h'] ?? $options['host'] ?? $env('HUE_BRIDGE_IP');
+$username = $options['u'] ?? $options['username'] ?? $env('HUE_USERNAME');
+$port = (int) ($options['p'] ?? $options['port'] ?? $env('HUE_PORT') ?? 8080);
+$bind = $options['b'] ?? $options['bind'] ?? $env('HUE_BIND') ?? '127.0.0.1';
+$apiKey = $options['k'] ?? $options['api-key'] ?? $env('HUE_API_KEY');
+$insecure = isset($options['insecure']) || filter_var($env('HUE_API_INSECURE') ?? 'false', FILTER_VALIDATE_BOOLEAN);
+$cors = $options['cors'] ?? $env('HUE_CORS_ORIGINS') ?? '';
+
+if (isset($options['d']) || isset($options['discover']) || !$bridgeIp) {
+    echo "🔍 Discovering Hue Bridge...\n";
+    $bridges = (new BridgeDiscovery())->discover();
+    if ($bridges === []) {
+        fwrite(STDERR, "❌ No Hue bridge found. Pass -h <ip> or set HUE_BRIDGE_IP.\n");
         exit(1);
     }
-}
-
-if (!$bridgeIp) {
-    echo "❌ Bridge IP not provided\n";
-    echo "💡 Use -h <ip> or set HUE_BRIDGE_IP environment variable\n";
-    exit(1);
+    $bridgeIp = $bridges[0]->getIp();
+    echo "✅ Found bridge at {$bridgeIp}\n";
 }
 
 if (!$username) {
-    echo "❌ Username not provided\n";
-    echo "💡 Use -u <username> or set HUE_USERNAME environment variable\n";
-    echo "💡 To get a username, press the bridge button and run:\n";
-    echo "   php -r \"echo (new \\OguzhanTogay\\HueClient\\HueClient('{$bridgeIp}'))->register('hue-api', 'server');\"\n";
+    fwrite(STDERR, "❌ Username not provided. Use -u <username> or set HUE_USERNAME.\n");
+    fwrite(STDERR, "💡 To get one, press the bridge's link button and run: hue setup\n");
     exit(1);
 }
 
-try {
-    echo "🚀 Starting Hue REST API Server...\n";
-    echo "🌉 Bridge: {$bridgeIp}\n";
-    echo "👤 Username: " . substr($username, 0, 8) . "...\n";
-    echo "🌐 Port: {$port}\n";
-    echo "📚 Documentation: http://localhost:{$port}/docs\n";
-    echo "🔧 API Base URL: http://localhost:{$port}/api\n\n";
-    
-    // Create Hue client
-    $hueClient = new HueClient($bridgeIp, $username);
-    
-    // Test connection
-    if (!$hueClient->isConnected()) {
-        echo "❌ Cannot connect to Hue Bridge\n";
-        echo "💡 Check bridge IP and username\n";
-        exit(1);
-    }
-    
-    echo "✅ Connected to Hue Bridge successfully\n";
-    echo "🎯 Server running... Press Ctrl+C to stop\n\n";
-    
-    // Set server port
-    $_ENV['SERVER_PORT'] = $port;
-    
-    // Create and run REST API
-    $api = new RestApi($hueClient);
-    $app = $api->getApp();
-    
-    $app->run();
-    
-} catch (Exception $e) {
-    echo "❌ Error starting server: " . $e->getMessage() . "\n";
+if (!$apiKey && !$insecure) {
+    fwrite(STDERR, "❌ No API key. Pass -k <key> (or set HUE_API_KEY), or --insecure on a trusted network.\n");
     exit(1);
 }
+
+if (!(new HueClient($bridgeIp, $username, ['retry_attempts' => 0]))->isConnected()) {
+    fwrite(STDERR, "❌ Cannot reach the bridge at {$bridgeIp} with that username.\n");
+    exit(1);
+}
+
+$router = realpath(__DIR__ . '/../public/api.php');
+$environment = getenv() + [
+    'HUE_BRIDGE_IP' => $bridgeIp,
+    'HUE_USERNAME' => $username,
+    'HUE_AUTO_DISCOVER' => 'false',
+    'HUE_API_KEY' => (string) $apiKey,
+    'HUE_API_INSECURE' => $insecure ? '1' : '0',
+    'HUE_CORS_ORIGINS' => $cors,
+];
+// Values given on the command line win over inherited ones.
+$environment = array_merge($environment, array_filter([
+    'HUE_BRIDGE_IP' => $bridgeIp,
+    'HUE_USERNAME' => $username,
+    'HUE_API_KEY' => $apiKey,
+    'HUE_API_INSECURE' => $insecure ? '1' : null,
+    'HUE_CORS_ORIGINS' => $cors !== '' ? $cors : null,
+]));
+
+echo "🚀 Hue REST API on http://{$bind}:{$port}/api (bridge {$bridgeIp})\n";
+echo $insecure && !$apiKey
+    ? "⚠️  No API key: anyone who can reach this port controls your lights.\n"
+    : "🔑 Clients must send the API key.\n";
+echo "📚 Docs: http://{$bind}:{$port}/docs — Ctrl+C to stop\n\n";
+
+$process = proc_open(
+    [PHP_BINARY, '-S', "{$bind}:{$port}", $router],
+    [STDIN, STDOUT, STDERR],
+    $pipes,
+    dirname($router),
+    $environment
+);
+
+exit($process === false ? 1 : proc_close($process));

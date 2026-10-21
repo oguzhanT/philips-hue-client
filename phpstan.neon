@@ -1,14 +1,13 @@
+includes:
+    - phpstan-baseline.neon
+
 parameters:
     level: 4
     paths:
         - src
     excludePaths:
+        # Need Laravel / Symfony installed to analyse; run with those frameworks present.
         - src/Laravel/*
         - src/Symfony/*
-        - src/Api/Controllers/*
-        - src/Effects/*
-        - examples/*
-    ignoreErrors:
-        - '#.*#'
     checkMissingIterableValueType: false
     checkGenericClassInNonGenericObjectType: false

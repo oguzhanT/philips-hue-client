@@ -12,6 +12,7 @@ use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Helper\QuestionHelper;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Question\Question;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
@@ -126,6 +127,7 @@ class HueCommand extends Command
 
     private function setupBridge(InputInterface $input, OutputInterface $output): int
     {
+        /** @var QuestionHelper $helper */
         $helper = $this->getHelper('question');
 
         // Discover bridges
@@ -378,6 +380,7 @@ class HueCommand extends Command
         $subAction = $input->getArgument('target');
 
         if ($subAction === 'activate') {
+            /** @var QuestionHelper $helper */
             $helper = $this->getHelper('question');
             $question = new Question('Enter scene name: ');
             $sceneName = $helper->ask($input, $output, $question);
@@ -439,6 +442,7 @@ class HueCommand extends Command
     private function interactiveMode(InputInterface $input, OutputInterface $output): int
     {
         $output->writeln('<info>Entering interactive mode. Type "exit" to quit.</info>');
+        /** @var QuestionHelper $helper */
         $helper = $this->getHelper('question');
 
         while (true) {
@@ -487,39 +491,30 @@ class HueCommand extends Command
 
     private function saveConfig(): void
     {
+        // The file holds the bridge token: create it readable by the owner only.
+        $old = umask(0077);
         file_put_contents($this->configFile, json_encode($this->config, JSON_PRETTY_PRINT));
+        umask($old);
+        @chmod($this->configFile, 0600);
     }
 
     private function startServer(InputInterface $input, OutputInterface $output): int
     {
-        $output->writeln('<info>Starting Hue REST API Server...</info>');
-
         $bridgeIp = $this->config['bridge_ip'] ?? null;
         $username = $this->config['username'] ?? null;
-        $port = 8080;
 
         if (!$bridgeIp || !$username) {
             $output->writeln('<error>Bridge not configured. Run "hue setup" first.</error>');
             return Command::FAILURE;
         }
 
-        $output->writeln("Bridge: {$bridgeIp}");
-        $output->writeln("Port: {$port}");
-        $output->writeln("Documentation: http://localhost:{$port}/docs");
-        $output->writeln("API Base: http://localhost:{$port}/api");
-        $output->writeln("");
-        $output->writeln("Press Ctrl+C to stop the server");
+        // bin/hue-server does the checks (API key, bridge reachable) and starts
+        // PHP's built-in server; HUE_API_KEY, HUE_PORT, HUE_BIND and friends
+        // are read from the environment.
+        $command = [PHP_BINARY, __DIR__ . '/../../bin/hue-server', '-h', $bridgeIp, '-u', $username];
+        $process = proc_open($command, [STDIN, STDOUT, STDERR], $pipes);
 
-        // Set environment variables for the server
-        putenv("HUE_BRIDGE_IP={$bridgeIp}");
-        putenv("HUE_USERNAME={$username}");
-
-        // Start the built-in PHP server
-        $publicPath = __DIR__ . '/../../public';
-        $command = "php -S localhost:{$port} -t {$publicPath} {$publicPath}/api.php";
-
-        passthru($command);
-        return Command::SUCCESS;
+        return $process !== false && proc_close($process) === 0 ? Command::SUCCESS : Command::FAILURE;
     }
 
     private function listSensors(InputInterface $input, OutputInterface $output): int

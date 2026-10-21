@@ -129,6 +129,8 @@ class BridgeController extends BaseController
     {
         try {
             $config = $this->hueClient->getConfig();
+            // The whitelist lists every app key the bridge has issued.
+            unset($config['whitelist']);
             return $this->jsonResponse($response, $config);
         } catch (\Exception $e) {
             return $this->errorResponse($response, $e->getMessage(), 500);

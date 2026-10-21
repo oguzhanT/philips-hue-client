@@ -8,7 +8,6 @@ use OguzhanTogay\HueClient\Exceptions\HueException;
 class Lights
 {
     private HueClient $client;
-    private array $cache = [];
 
     public function __construct(HueClient $client)
     {
@@ -24,7 +23,6 @@ class Lights
             $lights[] = new Light($this->client, $id, $lightData);
         }
 
-        $this->cache = $lights;
         return $lights;
     }
 

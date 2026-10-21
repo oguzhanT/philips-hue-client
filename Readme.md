@@ -240,19 +240,36 @@ hue effect sunrise --room="Bedroom" --duration=600
 
 ## 🌐 REST API Server
 
-The package includes a REST API over the client.
-
-> ⚠️ **Run it only on a trusted network.** It has no authentication yet and allows cross-origin requests, so anything that can reach the port, including web pages open in a browser on the same network, can control and delete lights, groups, scenes and schedules. Authentication is on the [roadmap](#-known-limitations-and-roadmap).
+The package includes a REST API over the client. Every request needs an API key, except `/api/health` and the docs.
 
 ### Quick Start
 
 ```bash
-# Using Composer's built-in server
-HUE_BRIDGE_IP=192.168.1.100 HUE_USERNAME=your-username composer serve
+# Pick a key once and give it to your clients
+export HUE_API_KEY=$(openssl rand -hex 24)
 
-# Or using Docker
-docker-compose up
+# Listens on 127.0.0.1:8080 by default; add --bind 0.0.0.0 to serve your network
+./vendor/bin/hue-server -h 192.168.1.100 -u your-username
+
+# Or, with the bridge already set up through `hue setup`
+hue server
+
+# Or using Docker (reads HUE_BRIDGE_IP, HUE_USERNAME and HUE_API_KEY from the environment)
+docker compose up
 ```
+
+Clients send the key as `Authorization: Bearer <key>` or `X-API-Key: <key>`.
+
+| Setting | Option | Environment | Default |
+|---|---|---|---|
+| API key | `-k`, `--api-key` | `HUE_API_KEY` | none: requests are refused |
+| Run without a key | `--insecure` | `HUE_API_INSECURE=1` | off. Trusted networks only |
+| Listen address | `-b`, `--bind` | `HUE_BIND` | `127.0.0.1` |
+| Port | `-p`, `--port` | `HUE_PORT` | `8080` |
+| Browser origins allowed (CORS) | `--cors` | `HUE_CORS_ORIGINS` (comma separated) | none |
+| Error details in responses | | `HUE_DEBUG=1` | off |
+
+Writes (`POST`, `PUT`, `PATCH`) must be sent as `application/json`. That stops web pages from posting to the API behind your back.
 
 The API will be available at:
 - **API Base URL**: `http://localhost:8080/api`
@@ -305,25 +322,28 @@ The API will be available at:
 
 ```bash
 # Get all lights
-curl http://localhost:8080/api/lights
+curl -H "Authorization: Bearer $HUE_API_KEY" http://localhost:8080/api/lights
 
 # Turn on a light (PUT takes bridge units: brightness 0-254, hue 0-65535, saturation 0-254)
 curl -X PUT http://localhost:8080/api/lights/1/state \
+  -H "Authorization: Bearer $HUE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"on": true, "brightness": 190}'
 
 # Set light color (PATCH takes brightness 0-100, color as hex, temperature in Kelvin)
 curl -X PATCH http://localhost:8080/api/lights/1/state \
+  -H "Authorization: Bearer $HUE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"color": "#FF5733"}'
 
 # Control a room
 curl -X PUT http://localhost:8080/api/groups/1/action \
+  -H "Authorization: Bearer $HUE_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"on": true, "brightness": 80, "color": "#00FF00"}'
 
 # Activate a scene
-curl -X PUT http://localhost:8080/api/scenes/abc123/activate
+curl -X PUT -H "Authorization: Bearer $HUE_API_KEY" http://localhost:8080/api/scenes/abc123/activate
 
 # Health check
 curl http://localhost:8080/api/health
@@ -337,7 +357,8 @@ Create a `.env` file (copy from `.env.example`):
 HUE_BRIDGE_IP=192.168.1.100
 HUE_USERNAME=your-hue-username
 HUE_PORT=8080
-CACHE_TTL=300
+HUE_API_KEY=your-generated-key
+HUE_CORS_ORIGINS=
 ```
 
 ## 🔌 Framework Integration
@@ -690,15 +711,13 @@ What the library does not do yet, so you are not surprised:
 - **Hue API v1 only.** Gradient lights, the bridge's own effects (candle, fire, sparkle), dynamic scenes and entertainment areas need CLIP v2.
 - **No real-time events.** `$client->events()` is a placeholder; there is no event stream yet.
 - **Discovery needs the internet.** Only Philips' N-UPnP service is used; local mDNS discovery is not implemented.
-- **REST server has no authentication** and should stay on a trusted network.
 - **Effects block** the PHP process while they run.
 - **Caching and rate limiting** are off unless `symfony/cache` and `symfony/rate-limiter` are installed.
 
 Planned, roughly in this order:
 
-1. REST API authentication, closed CORS, no secrets in error messages
-2. A `signal` API (`$hue->signal('success')`, `hue signal error`) for developer notifications, and a Laravel notification channel
-3. CLIP v2 with event stream and mDNS discovery (2.0)
+1. A `signal` API (`$hue->signal('success')`, `hue signal error`) for developer notifications, and a Laravel notification channel
+2. CLIP v2 with event stream and mDNS discovery (2.0)
 
 See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
@@ -793,7 +812,7 @@ $lights = $client->lights()->getAll(); // Cached for 10 seconds
 
 ### Rate Limiting
 With `symfony/rate-limiter` installed, the REST API rate limits requests to protect your bridge:
-- **Limit**: 100 requests per minute per IP
+- **Limit**: 100 requests per minute per client address (`REMOTE_ADDR`; forwarding headers are ignored because clients can forge them)
 - **Headers**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`
 - **Error**: HTTP 429 when exceeded
 

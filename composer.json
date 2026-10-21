@@ -3,7 +3,18 @@
     "description": "A modern, fully-featured PHP client for Philips Hue smart lights",
     "type": "library",
     "license": "MIT",
-    "keywords": ["philips", "hue", "smart-lights", "cli", "api-client", "laravel", "symfony", "iot", "home-automation", "php"],
+    "keywords": [
+        "philips",
+        "hue",
+        "smart-lights",
+        "cli",
+        "api-client",
+        "laravel",
+        "symfony",
+        "iot",
+        "home-automation",
+        "php"
+    ],
     "authors": [
         {
             "name": "Oguzhan Togay",
@@ -13,18 +24,26 @@
     "require": {
         "php": "^8.2",
         "ext-json": "*",
-        "guzzlehttp/guzzle": "^7.0",
+        "guzzlehttp/guzzle": "^7.15.2",
         "psr/log": "^1.1|^2.0|^3.0",
         "slim/psr7": "^1.0",
         "slim/slim": "^4.0",
         "symfony/console": "^6.0|^7.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "^9.5",
         "mockery/mockery": "^1.5",
         "phpstan/phpstan": "^1.10",
+        "phpunit/phpunit": "^9.5",
         "squizlabs/php_codesniffer": "^3.7",
+        "symfony/cache": "^6.0|^7.0",
+        "symfony/rate-limiter": "^6.0|^7.0",
         "zircote/swagger-php": "^3.0"
+    },
+    "suggest": {
+        "symfony/cache": "Caches bridge reads (HueClient cache_enabled) and REST responses",
+        "symfony/rate-limiter": "Rate limits the REST API per client",
+        "ext-redis": "Redis cache adapter (cache_type: redis)",
+        "zircote/swagger-php": "Serves the OpenAPI document at /api/docs"
     },
     "autoload": {
         "psr-4": {
@@ -42,7 +61,7 @@
     ],
     "scripts": {
         "test": "vendor/bin/phpunit",
-        "test-coverage": "vendor/bin/phpunit --coverage-html coverage",
+        "test-coverage": "vendor/bin/phpunit --coverage-html coverage --coverage-clover coverage/clover.xml",
         "analyse": "vendor/bin/phpstan analyse --memory-limit=256M",
         "cs": "vendor/bin/phpcs --standard=PSR12 src/",
         "cs-fix": "vendor/bin/phpcbf --standard=PSR12 src/",

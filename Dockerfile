@@ -24,11 +24,11 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 # Set working directory
 WORKDIR /var/www
 
-# Copy composer files
-COPY composer.json ./
+# Copy composer files (the lock keeps builds reproducible)
+COPY composer.json composer.lock ./
 
 # Install dependencies
-RUN composer install --no-dev --optimize-autoloader --no-interaction
+RUN composer install --no-dev --optimize-autoloader --no-interaction --no-scripts
 
 # Copy application code
 COPY . .
@@ -48,5 +48,9 @@ EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8080/api/health || exit 1
 
-# Run the application
+# Run as an unprivileged user
+USER www-data
+
+# Run the application. The API refuses requests until HUE_API_KEY is set
+# (or HUE_API_INSECURE=1 on a trusted network).
 CMD ["php", "-S", "0.0.0.0:8080", "-t", "public", "public/api.php"]

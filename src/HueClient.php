@@ -25,7 +25,7 @@ class HueClient
     private LoggerInterface $logger;
     private array $config;
     private RetryHandler $retryHandler;
-    private ?HueCache $cache;
+    private ?HueCache $cache = null;
 
     private ?Lights $lights = null;
     private ?Groups $groups = null;
@@ -45,6 +45,7 @@ class HueClient
         $this->logger = $logger ?? new NullLogger();
         $this->config = array_merge([
             'timeout' => 5,
+            'connect_timeout' => 3,
             'verify' => false,
             'http_errors' => false,
             'retry_attempts' => 3,
@@ -55,6 +56,7 @@ class HueClient
         $this->httpClient = new Client([
             'base_uri' => "https://{$bridgeIp}/api/",
             'timeout' => $this->config['timeout'],
+            'connect_timeout' => $this->config['connect_timeout'],
             'verify' => $this->config['verify'],
             'http_errors' => $this->config['http_errors'],
         ]);
@@ -62,7 +64,8 @@ class HueClient
         $this->retryHandler = new RetryHandler(
             $this->config['retry_attempts'],
             [1, 2, 4],
-            $this->logger
+            $this->logger,
+            fn (string $message): string => $this->redact($message)
         );
 
         if ($this->config['cache_enabled'] && class_exists('\Symfony\Component\Cache\Adapter\FilesystemAdapter')) {
@@ -74,7 +77,7 @@ class HueClient
         }
     }
 
-    public function register(string $appName, string $deviceName = null): string
+    public function register(string $appName, ?string $deviceName = null): string
     {
         $deviceName = $deviceName ?? gethostname();
 
@@ -101,7 +104,6 @@ class HueClient
             if (isset($data[0]['success']['username'])) {
                 $this->username = $data[0]['success']['username'];
                 $this->logger->info('Successfully registered with Hue Bridge', [
-                    'username' => $this->username,
                     'bridge_ip' => $this->bridgeIp
                 ]);
                 return $this->username;
@@ -109,7 +111,7 @@ class HueClient
 
             throw new HueException('Unexpected response from bridge');
         } catch (GuzzleException $e) {
-            throw new HueException('Failed to register with bridge: ' . $e->getMessage(), 0, $e);
+            throw new HueException('Failed to register with bridge: ' . $this->redact($e->getMessage()));
         }
     }
 
@@ -134,25 +136,58 @@ class HueClient
             $response = $this->httpClient->request($method, $uri, $options);
             $data = json_decode($response->getBody()->getContents(), true);
 
-            if (is_array($data) && isset($data[0]['error'])) {
-                throw new HueException($data[0]['error']['description']);
+            // The bridge answers a multi-field write with one entry per field;
+            // any of them can be the error.
+            if (is_array($data)) {
+                $errors = [];
+                foreach ($data as $item) {
+                    if (is_array($item) && isset($item['error']['description'])) {
+                        $errors[] = $item['error']['description'];
+                    }
+                }
+                if ($errors !== []) {
+                    throw new HueException(implode('; ', $errors));
+                }
             }
 
             return $data;
         };
 
         try {
-            $data = $this->retryHandler->execute($operation, "HTTP {$method} {$endpoint}");
+            // A POST that timed out may still have been applied by the bridge;
+            // repeating it would create the group, scene or schedule twice.
+            $data = $method === 'POST'
+                ? $operation()
+                : $this->retryHandler->execute($operation, "HTTP {$method} {$endpoint}");
 
-            // Cache GET responses
-            if ($method === 'GET' && $this->cache && $data) {
-                $this->cache->set('api', $cacheKey, $data);
+            if ($this->cache) {
+                if ($method === 'GET') {
+                    if ($data) {
+                        $this->cache->set('api', $cacheKey, $data);
+                    }
+                } else {
+                    // A write makes every cached read stale.
+                    $this->cache->invalidate('api');
+                }
             }
 
             return $data;
         } catch (GuzzleException $e) {
-            throw new HueException('Request failed: ' . $e->getMessage(), 0, $e);
+            // Guzzle puts the full URI, token included, into its messages.
+            throw new HueException('Request failed: ' . $this->redact($e->getMessage()));
         }
+    }
+
+    /**
+     * Removes the bridge username (the API token) from a message.
+     */
+    public function redact(string $message): string
+    {
+        if (!$this->username) {
+            return $message;
+        }
+
+        return str_replace($this->username, '***', $message);
     }
 
     public function lights(): Lights
