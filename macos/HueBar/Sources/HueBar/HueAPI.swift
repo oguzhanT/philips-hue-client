@@ -37,6 +37,13 @@ struct HueAPI {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, _) = try await URLSession.shared.data(for: request)
         try Self.throwIfError(try JSONSerialization.jsonObject(with: data))
+
+        // A change made here is newer than any state another sender (the PHP
+        // library) is waiting to restore on this lamp, so drop that restore.
+        let parts = path.split(separator: "/")
+        if parts.count == 3, parts[0] == "lights", parts[2] == "state" {
+            NotifierFiles.dropPendingRestore(lightId: String(parts[1]))
+        }
     }
 
     private static func throwIfError(_ object: Any) throws {
@@ -97,7 +104,26 @@ enum NotifierFiles {
         dict.merge(changes) { _, new in new }
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let data = try JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys])
-        try (data + Data("\n".utf8)).write(to: config, options: .atomic)
+        // The config holds the bridge token: write an owner-only temporary file
+        // and move it into place, so it is never readable by others, not even briefly.
+        let temporary = directory.appendingPathComponent(".config.json.\(ProcessInfo.processInfo.processIdentifier)")
+        guard FileManager.default.createFile(
+            atPath: temporary.path,
+            contents: data + Data("\n".utf8),
+            attributes: [.posixPermissions: 0o600]
+        ) else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        if rename(temporary.path, config.path) != 0 {
+            try? FileManager.default.removeItem(at: temporary)
+            throw CocoaError(.fileWriteUnknown)
+        }
+    }
+
+    /// See docs/signals.md: signal-restore-<id>.json next to the config.
+    static func dropPendingRestore(lightId: String) {
+        let safe = lightId.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+        try? FileManager.default.removeItem(at: directory.appendingPathComponent("signal-restore-\(safe).json"))
     }
 
     /// nil when Claude Code settings don't mention the plugin.

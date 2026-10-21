@@ -21,10 +21,15 @@ class EventStream
     /** @var \Closure(string): string */
     private \Closure $redact;
 
+    /**
+     * @param string|null $peerFingerprint SHA-256 of the certificate the bridge must present; checked
+     *                                     during the TLS handshake, before any header is sent
+     */
     public function __construct(
         private readonly ClientInterface $http,
         private readonly string $applicationKey,
-        callable $redact
+        callable $redact,
+        private readonly ?string $peerFingerprint = null
     ) {
         $this->redact = \Closure::fromCallable($redact);
     }
@@ -52,7 +57,9 @@ class EventStream
                 'timeout' => 0,
                 // Wake up regularly so the deadline is honoured on a quiet stream.
                 'read_timeout' => $seconds !== null ? min(5.0, max(0.5, $seconds)) : 60.0,
-            ]);
+            ] + ($this->peerFingerprint !== null ? [
+                'stream_context' => ['ssl' => ['peer_fingerprint' => ['sha256' => $this->peerFingerprint]]],
+            ] : []));
         } catch (GuzzleException $e) {
             throw new HueException('Event stream failed: ' . ($this->redact)($e->getMessage()));
         }

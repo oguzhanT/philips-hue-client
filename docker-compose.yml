@@ -9,6 +9,10 @@ services:
       # Clients send it as "Authorization: Bearer <key>". Generate one with: openssl rand -hex 24
       - HUE_API_KEY=${HUE_API_KEY:?Set HUE_API_KEY}
       - HUE_CORS_ORIGINS=${HUE_CORS_ORIGINS:-}
+      - HUE_GITHUB_WEBHOOK_SECRET=${HUE_GITHUB_WEBHOOK_SECRET:-}
+      - HUE_SENTRY_WEBHOOK_SECRET=${HUE_SENTRY_WEBHOOK_SECRET:-}
+      - HUE_WEBHOOK_LIGHTS=${HUE_WEBHOOK_LIGHTS:-}
+      - HUE_GITHUB_BRANCHES=${HUE_GITHUB_BRANCHES:-}
     volumes:
       - ./:/var/www
     networks:

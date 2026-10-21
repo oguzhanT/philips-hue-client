@@ -6,6 +6,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use OguzhanTogay\HueClient\Exceptions\HueException;
+use OguzhanTogay\HueClient\Security\BridgeCertificate;
 use OguzhanTogay\HueClient\V2\Resources\Device;
 use OguzhanTogay\HueClient\V2\Resources\GroupedLight;
 use OguzhanTogay\HueClient\V2\Resources\Light;
@@ -26,8 +27,9 @@ use OguzhanTogay\HueClient\V2\Resources\Scene;
  * The application key is the same value the v1 API calls the username.
  *
  * TLS: the bridge serves a certificate signed by Philips' own CA, so the
- * default 'verify' => false accepts it without checking. To verify, pass the
- * path of Signify's root CA as 'verify'.
+ * default 'verify' => false accepts it without checking. Pin it instead:
+ * 'pinned_public_key' => BridgeCertificate::fetch($ip)->pin (read once, on a
+ * network you trust).
  */
 class HueV2Client
 {
@@ -37,7 +39,8 @@ class HueV2Client
     private array $collections = [];
 
     /**
-     * @param array{timeout?: float, connect_timeout?: float, verify?: bool|string} $options
+     * @param array{timeout?: float, connect_timeout?: float, verify?: bool|string,
+     *              pinned_public_key?: ?string} $options
      */
     public function __construct(
         private readonly string $bridgeIp,
@@ -52,7 +55,7 @@ class HueV2Client
             'connect_timeout' => $this->options['connect_timeout'],
             'verify' => $this->options['verify'],
             'http_errors' => false,
-        ]);
+        ] + \OguzhanTogay\HueClient\HueClient::pinOptions($this->options['pinned_public_key'] ?? null));
     }
 
     /** @return ResourceCollection<Light> */
@@ -101,9 +104,33 @@ class HueV2Client
         return $this->collection($type, Resource::class);
     }
 
+    /**
+     * With a pinned key, the certificate is checked before the stream opens:
+     * Guzzle streams through PHP's stream wrapper, which ignores curl's pin,
+     * so the connection is tied to the pinned certificate's fingerprint instead.
+     */
     public function events(): EventStream
     {
-        return new EventStream($this->http, $this->applicationKey, fn (string $m): string => $this->redact($m));
+        $fingerprint = null;
+        $pin = $this->options['pinned_public_key'] ?? null;
+
+        if ($pin !== null && $pin !== '') {
+            [$host, $port] = array_pad(explode(':', $this->bridgeIp, 2), 2, '443');
+            $certificate = BridgeCertificate::fetch($host, (int) $port);
+            if (!hash_equals($pin, $certificate->pin)) {
+                throw new HueException(
+                    "The bridge at {$this->bridgeIp} presented a different key than the pinned one."
+                );
+            }
+            $fingerprint = $certificate->fingerprint;
+        }
+
+        return new EventStream(
+            $this->http,
+            $this->applicationKey,
+            fn (string $m): string => $this->redact($m),
+            $fingerprint
+        );
     }
 
     /**

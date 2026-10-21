@@ -2,15 +2,14 @@
 
 namespace OguzhanTogay\HueClient;
 
-use GuzzleHttp\Client;
-use GuzzleHttp\Pool;
-use GuzzleHttp\Psr7\Request;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
 
 class ConnectionPool
 {
     private array $bridges = [];
+    /** @var array<string, string> public key pin per bridge ip */
+    private array $pins = [];
     private array $clients = [];
     private LoggerInterface $logger;
     private int $maxConnections;
@@ -28,9 +27,15 @@ class ConnectionPool
         $this->logger = $logger ?? new NullLogger();
     }
 
-    public function addBridge(string $ip, string $username): void
+    /**
+     * @param string|null $pinnedPublicKey see Security\BridgeCertificate
+     */
+    public function addBridge(string $ip, string $username, ?string $pinnedPublicKey = null): void
     {
         $this->bridges[$ip] = $username;
+        if ($pinnedPublicKey !== null && $pinnedPublicKey !== '') {
+            $this->pins[$ip] = $pinnedPublicKey;
+        }
         $this->createClient($ip, $username);
     }
 
@@ -54,41 +59,31 @@ class ConnectionPool
         return $this->clients;
     }
 
+    /**
+     * Each bridge's reachability, through a pinned, redacting client.
+     */
     public function healthCheck(): array
     {
         $results = [];
-        $requests = [];
 
         foreach ($this->bridges as $ip => $username) {
-            $requests[] = new Request('GET', "https://{$ip}/api/{$username}/config");
+            $started = microtime(true);
+            // One attempt, no retries or cache: an unreachable bridge should
+            // cost one timeout, not the retry schedule.
+            $probe = new HueClient((string) $ip, $username, [
+                'timeout' => $this->timeout,
+                'retry_attempts' => 0,
+                'cache_enabled' => false,
+                'pinned_public_key' => $this->pins[$ip] ?? null,
+            ], $this->logger);
+            $healthy = $probe->isConnected();
+
+            $results[$ip] = [
+                'status' => $healthy ? 'healthy' : 'unhealthy',
+                'response_time' => round((microtime(true) - $started) * 1000) . ' ms',
+                'last_check' => date('c'),
+            ];
         }
-
-        if (empty($requests)) {
-            return $results;
-        }
-
-        $client = new Client(['timeout' => $this->timeout, 'verify' => false]);
-        $pool = new Pool($client, $requests, [
-            'concurrency' => $this->maxConnections,
-            'fulfilled' => function ($response, $index) use (&$results) {
-                $ip = array_keys($this->bridges)[$index];
-                $results[$ip] = [
-                    'status' => 'healthy',
-                    'response_time' => $response->getHeader('X-Response-Time')[0] ?? 'unknown',
-                    'last_check' => date('c')
-                ];
-            },
-            'rejected' => function ($reason, $index) use (&$results) {
-                $ip = array_keys($this->bridges)[$index];
-                $results[$ip] = [
-                    'status' => 'unhealthy',
-                    'error' => (string) $reason,
-                    'last_check' => date('c')
-                ];
-            },
-        ]);
-
-        $pool->promise()->wait();
 
         return $results;
     }
@@ -116,6 +111,11 @@ class ConnectionPool
         return $results;
     }
 
+    public function getMaxConnections(): int
+    {
+        return $this->maxConnections;
+    }
+
     public function getBridgeCount(): int
     {
         return count($this->bridges);
@@ -132,7 +132,8 @@ class ConnectionPool
     {
         try {
             $client = new HueClient($ip, $username, [
-                'timeout' => $this->timeout
+                'timeout' => $this->timeout,
+                'pinned_public_key' => $this->pins[$ip] ?? null,
             ], $this->logger);
 
             if ($client->isConnected()) {

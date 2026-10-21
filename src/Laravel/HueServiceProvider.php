@@ -59,7 +59,11 @@ class HueServiceProvider extends ServiceProvider
 
             foreach ($config['bridges'] as $name => $bridgeConfig) {
                 if ($bridgeConfig['ip'] && $bridgeConfig['username']) {
-                    $pool->addBridge($bridgeConfig['ip'], $bridgeConfig['username']);
+                    $pool->addBridge(
+                        $bridgeConfig['ip'],
+                        $bridgeConfig['username'],
+                        $bridgeConfig['options']['pinned_public_key'] ?? null
+                    );
                 }
             }
 

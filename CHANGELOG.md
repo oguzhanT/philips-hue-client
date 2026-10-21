@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.1.0] - 2026-10-21
+
+### Added
+- **Webhooks**: `POST /hooks/github` (workflow runs, check suites, deployments) and `POST /hooks/sentry` (issues, alerts) show signals; workflow runs from forks are ignored. Each delivery's HMAC signature is checked against `HUE_GITHUB_WEBHOOK_SECRET` / `HUE_SENTRY_WEBHOOK_SECRET`; lamps from `HUE_WEBHOOK_LIGHTS`, branches from `HUE_GITHUB_BRANCHES`.
+- **Certificate pinning**: `Security\BridgeCertificate::fetch()` reads the bridge's certificate (its common name is the bridge id) and its public key pin; `pinned_public_key` makes `HueClient`, `HueV2Client` and the event stream refuse any other key. `hue setup` checks the certificate against the discovered bridge id and pins it; `hue pin` pins an existing setup. The event stream, which Guzzle runs through PHP's stream wrapper where curl's pin does not apply, checks the certificate first and ties the connection to its fingerprint. `ConnectionPool` (and Laravel, via `HUE_PINNED_PUBLIC_KEY`) passes pins to its clients, and its health check now goes through them instead of a separate unpinned client.
+
+### Changed
+- HueBar writes the shared config owner-only (it reverted to 0644 on every save) and, like every sender that does not restore, drops a lamp's pending `signal-restore` file when it changes the lamp.
+- `docs/signals.md`: all senders now follow the restore-file rule (claude-hue-notify 1.2.0 joined).
+
+
 ## [2.0.0] - 2026-10-21
 
 ### Added

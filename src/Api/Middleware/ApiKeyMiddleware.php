@@ -17,6 +17,9 @@ class ApiKeyMiddleware implements MiddlewareInterface
     /** Paths that never need a key: they expose nothing about the bridge. */
     private const PUBLIC_PATHS = ['/api/health', '/docs', '/api/docs'];
 
+    /** Webhooks authenticate each delivery with their own HMAC signature. */
+    private const SIGNED_PREFIX = '/hooks/';
+
     public function __construct(
         private readonly ?string $apiKey,
         private readonly bool $allowInsecure = false
@@ -25,7 +28,12 @@ class ApiKeyMiddleware implements MiddlewareInterface
 
     public function process(Request $request, RequestHandlerInterface $handler): Response
     {
-        if ($request->getMethod() === 'OPTIONS' || in_array($request->getUri()->getPath(), self::PUBLIC_PATHS, true)) {
+        $path = $request->getUri()->getPath();
+        if (
+            $request->getMethod() === 'OPTIONS'
+            || in_array($path, self::PUBLIC_PATHS, true)
+            || str_starts_with($path, self::SIGNED_PREFIX)
+        ) {
             return $handler->handle($request);
         }
 

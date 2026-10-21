@@ -7,6 +7,7 @@ use OguzhanTogay\HueClient\Discovery\BridgeDiscovery;
 use OguzhanTogay\HueClient\Effects\ColorLoop;
 use OguzhanTogay\HueClient\Effects\Breathing;
 use OguzhanTogay\HueClient\Effects\Alert;
+use OguzhanTogay\HueClient\Security\BridgeCertificate;
 use OguzhanTogay\HueClient\Signal\Signaler;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -96,6 +97,8 @@ class HueCommand extends Command
                     return $this->sendSignal($input, $output);
                 case 'pause':
                     return $this->pauseSignals($input, $output);
+                case 'pin':
+                    return $this->pinCertificate($input, $output);
                 case 'events':
                     return $this->watchEvents($input, $output);
                 case 'resume':
@@ -159,8 +162,23 @@ class HueCommand extends Command
         $bridge = $bridges[0];
         $output->writeln("Found bridge: {$bridge->getId()} at {$bridge->getIp()}");
 
-        // Create client
-        $client = new HueClient($bridge->getIp());
+        // Pin the bridge's certificate before the token ever crosses the network.
+        try {
+            $certificate = BridgeCertificate::fetch($bridge->getIp());
+        } catch (\Exception $e) {
+            $output->writeln("<error>{$e->getMessage()}</error>");
+            return Command::FAILURE;
+        }
+
+        if (!$certificate->matchesBridgeId($bridge->getId())) {
+            $output->writeln(
+                "<error>The certificate at {$bridge->getIp()} is for '{$certificate->commonName}', "
+                . "not bridge {$bridge->getId()}. Not pairing.</error>"
+            );
+            return Command::FAILURE;
+        }
+
+        $client = new HueClient($bridge->getIp(), null, ['pinned_public_key' => $certificate->pin]);
 
         // Register
         $question = new ConfirmationQuestion(
@@ -176,7 +194,8 @@ class HueCommand extends Command
             // Save config
             $this->config = [
                 'bridge_ip' => $bridge->getIp(),
-                'username' => $username
+                'username' => $username,
+                'pinned_public_key' => $certificate->pin,
             ];
             $this->saveConfig();
 
@@ -466,7 +485,11 @@ class HueCommand extends Command
             return null;
         }
 
-        $this->client = new HueClient($this->config['bridge_ip'], $this->config['username']);
+        $this->client = new HueClient(
+            $this->config['bridge_ip'],
+            $this->config['username'],
+            ['pinned_public_key' => $this->config['pinned_public_key'] ?? null]
+        );
         return $this->client;
     }
 
@@ -637,6 +660,36 @@ class HueCommand extends Command
         return Command::SUCCESS;
     }
 
+    /**
+     * Pins the certificate of the configured bridge (for setups made before 2.1).
+     */
+    private function pinCertificate(InputInterface $input, OutputInterface $output): int
+    {
+        $ip = $this->config['bridge_ip'] ?? null;
+        if (!$ip) {
+            $output->writeln('<error>Not configured. Run "hue setup" first.</error>');
+            return Command::FAILURE;
+        }
+
+        $certificate = BridgeCertificate::fetch($ip);
+        $output->writeln("Certificate for: {$certificate->commonName} (issued by {$certificate->issuer})");
+        $output->writeln("Public key pin:  {$certificate->pin}");
+
+        if (!empty($this->config['pinned_public_key']) && $this->config['pinned_public_key'] !== $certificate->pin) {
+            $output->writeln('<error>This is NOT the key pinned before. Not changing anything.</error>');
+            $output->writeln(
+                'If you replaced the bridge, remove pinned_public_key from ' . $this->configFile . ' first.'
+            );
+            return Command::FAILURE;
+        }
+
+        $this->config['pinned_public_key'] = $certificate->pin;
+        $this->saveConfig();
+        $output->writeln('<info>Pinned. Requests to any other key will be refused.</info>');
+
+        return Command::SUCCESS;
+    }
+
     private function watchEvents(InputInterface $input, OutputInterface $output): int
     {
         $client = $this->getClient();
@@ -706,6 +759,7 @@ class HueCommand extends Command
         $output->writeln("  effect [type]            - Run effect (party, sunrise, sunset, breathing)");
         $output->writeln("  signal [type]            - attention, success, error, warning, working, off");
         $output->writeln("  events                   - Watch changes live (--duration to stop after N seconds)");
+        $output->writeln("  pin                      - Pin the bridge's certificate (done by setup since 2.1)");
         $output->writeln("  pause [minutes]          - Pause signals (also pauses claude-hue-notify)");
         $output->writeln("  resume                   - Resume signals");
         $output->writeln("  server                   - Start REST API server");

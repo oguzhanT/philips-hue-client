@@ -124,6 +124,7 @@ class SecurityTest extends TestCase
                 'allow_insecure' => true,
                 'cors_origins' => ['https://a.local', 'https://b.local'],
                 'debug' => false,
+                'webhooks' => ['github_secret' => null, 'sentry_secret' => null, 'lights' => [], 'branches' => []],
             ], RestApi::optionsFromEnvironment());
         } finally {
             putenv('HUE_API_KEY');
