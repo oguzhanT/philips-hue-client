@@ -18,6 +18,7 @@ use OguzhanTogay\HueClient\Api\Controllers\ScenesController;
 use OguzhanTogay\HueClient\Api\Controllers\SchedulesController;
 use OguzhanTogay\HueClient\Api\Controllers\SensorsController;
 use OguzhanTogay\HueClient\Api\Controllers\BridgeController;
+use OguzhanTogay\HueClient\Api\Controllers\WebhookController;
 
 /**
  * @OA\Info(
@@ -51,11 +52,14 @@ class RestApi
     private array $options;
 
     /**
-     * @param array{api_key?: ?string, allow_insecure?: bool, cors_origins?: string[], debug?: bool} $options
-     *   api_key         required on every request except /api/health and the docs
+     * @param array{api_key?: ?string, allow_insecure?: bool, cors_origins?: string[], debug?: bool,
+     *              webhooks?: array{github_secret?: ?string, sentry_secret?: ?string,
+     *                               lights?: string[], branches?: string[]}} $options
+     *   api_key         required on every request except /api/health, the docs and signed webhooks
      *   allow_insecure  run without an API key (trusted networks only)
      *   cors_origins    browser origins allowed to call the API; none by default
      *   debug           show error details in responses
+     *   webhooks        secrets for /hooks/github and /hooks/sentry, the lamps they light, branches to watch
      */
     public function __construct(HueClient $hueClient, array $options = [])
     {
@@ -65,6 +69,7 @@ class RestApi
             'allow_insecure' => false,
             'cors_origins' => [],
             'debug' => false,
+            'webhooks' => [],
         ];
         $this->app = AppFactory::create();
         $this->setupRoutes();
@@ -72,20 +77,28 @@ class RestApi
     }
 
     /**
-     * Options from HUE_API_KEY, HUE_API_INSECURE, HUE_CORS_ORIGINS (comma
-     * separated) and HUE_DEBUG.
+     * Options from HUE_API_KEY, HUE_API_INSECURE, HUE_CORS_ORIGINS, HUE_DEBUG,
+     * HUE_GITHUB_WEBHOOK_SECRET, HUE_SENTRY_WEBHOOK_SECRET, HUE_WEBHOOK_LIGHTS
+     * and HUE_GITHUB_BRANCHES (lists comma separated).
      */
     public static function optionsFromEnvironment(): array
     {
         $flag = static fn (string $name): bool =>
             filter_var(getenv($name) ?: 'false', FILTER_VALIDATE_BOOLEAN);
-        $origins = array_values(array_filter(array_map('trim', explode(',', (string) getenv('HUE_CORS_ORIGINS')))));
+        $list = static fn (string $name): array =>
+            array_values(array_filter(array_map('trim', explode(',', (string) getenv($name)))));
 
         return [
             'api_key' => getenv('HUE_API_KEY') ?: null,
             'allow_insecure' => $flag('HUE_API_INSECURE'),
-            'cors_origins' => $origins,
+            'cors_origins' => $list('HUE_CORS_ORIGINS'),
             'debug' => $flag('HUE_DEBUG'),
+            'webhooks' => [
+                'github_secret' => getenv('HUE_GITHUB_WEBHOOK_SECRET') ?: null,
+                'sentry_secret' => getenv('HUE_SENTRY_WEBHOOK_SECRET') ?: null,
+                'lights' => $list('HUE_WEBHOOK_LIGHTS'),
+                'branches' => $list('HUE_GITHUB_BRANCHES'),
+            ],
         ];
     }
 
@@ -120,6 +133,11 @@ class RestApi
         $schedulesController = new SchedulesController($this->hueClient);
         $sensorsController = new SensorsController($this->hueClient);
         $bridgeController = new BridgeController($this->hueClient);
+        $webhookController = new WebhookController($this->hueClient, $this->options['webhooks']);
+
+        // Signed webhooks (no API key; each delivery carries an HMAC signature)
+        $this->app->post('/hooks/github', [$webhookController, 'github']);
+        $this->app->post('/hooks/sentry', [$webhookController, 'sentry']);
 
         // Bridge health and info
         $this->app->get('/api/health', [$bridgeController, 'health']);

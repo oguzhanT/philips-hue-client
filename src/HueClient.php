@@ -60,7 +60,7 @@ class HueClient
             'connect_timeout' => $this->config['connect_timeout'],
             'verify' => $this->config['verify'],
             'http_errors' => $this->config['http_errors'],
-        ]);
+        ] + self::pinOptions($this->config['pinned_public_key'] ?? null));
 
         $this->retryHandler = new RetryHandler(
             $this->config['retry_attempts'],
@@ -187,6 +187,23 @@ class HueClient
     }
 
     /**
+     * Guzzle options that make curl refuse any other public key than the
+     * pinned one (see Security\BridgeCertificate). Works with 'verify' => false.
+     */
+    public static function pinOptions(?string $pin): array
+    {
+        if ($pin === null || $pin === '') {
+            return [];
+        }
+
+        if (!str_starts_with($pin, 'sha256//')) {
+            throw new \InvalidArgumentException("pinned_public_key must look like 'sha256//<base64>'.");
+        }
+
+        return ['curl' => [CURLOPT_PINNEDPUBLICKEY => $pin]];
+    }
+
+    /**
      * Removes the bridge username (the API token) from a message.
      */
     public function redact(string $message): string
@@ -252,7 +269,10 @@ class HueClient
             throw new AuthenticationException('No username set. Please register first.');
         }
 
-        return new HueV2Client($this->bridgeIp, $this->username, $options + ['verify' => $this->config['verify']]);
+        return new HueV2Client($this->bridgeIp, $this->username, $options + [
+            'verify' => $this->config['verify'],
+            'pinned_public_key' => $this->config['pinned_public_key'] ?? null,
+        ]);
     }
 
     public function sensors(): Sensors

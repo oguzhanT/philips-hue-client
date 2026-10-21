@@ -37,6 +37,13 @@ struct HueAPI {
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         let (data, _) = try await URLSession.shared.data(for: request)
         try Self.throwIfError(try JSONSerialization.jsonObject(with: data))
+
+        // A change made here is newer than any state another sender (the PHP
+        // library) is waiting to restore on this lamp, so drop that restore.
+        let parts = path.split(separator: "/")
+        if parts.count == 3, parts[0] == "lights", parts[2] == "state" {
+            NotifierFiles.dropPendingRestore(lightId: String(parts[1]))
+        }
     }
 
     private static func throwIfError(_ object: Any) throws {
@@ -98,6 +105,15 @@ enum NotifierFiles {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let data = try JSONSerialization.data(withJSONObject: dict, options: [.prettyPrinted, .sortedKeys])
         try (data + Data("\n".utf8)).write(to: config, options: .atomic)
+        // An atomic write creates a new file with the default umask (0644);
+        // the config holds the bridge token, so keep it owner-only.
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: config.path)
+    }
+
+    /// See docs/signals.md: signal-restore-<id>.json next to the config.
+    static func dropPendingRestore(lightId: String) {
+        let safe = lightId.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+        try? FileManager.default.removeItem(at: directory.appendingPathComponent("signal-restore-\(safe).json"))
     }
 
     /// nil when Claude Code settings don't mention the plugin.

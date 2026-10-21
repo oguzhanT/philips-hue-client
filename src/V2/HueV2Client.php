@@ -26,8 +26,9 @@ use OguzhanTogay\HueClient\V2\Resources\Scene;
  * The application key is the same value the v1 API calls the username.
  *
  * TLS: the bridge serves a certificate signed by Philips' own CA, so the
- * default 'verify' => false accepts it without checking. To verify, pass the
- * path of Signify's root CA as 'verify'.
+ * default 'verify' => false accepts it without checking. Pin it instead:
+ * 'pinned_public_key' => BridgeCertificate::fetch($ip)->pin (read once, on a
+ * network you trust).
  */
 class HueV2Client
 {
@@ -37,7 +38,8 @@ class HueV2Client
     private array $collections = [];
 
     /**
-     * @param array{timeout?: float, connect_timeout?: float, verify?: bool|string} $options
+     * @param array{timeout?: float, connect_timeout?: float, verify?: bool|string,
+     *              pinned_public_key?: ?string} $options
      */
     public function __construct(
         private readonly string $bridgeIp,
@@ -52,7 +54,7 @@ class HueV2Client
             'connect_timeout' => $this->options['connect_timeout'],
             'verify' => $this->options['verify'],
             'http_errors' => false,
-        ]);
+        ] + \OguzhanTogay\HueClient\HueClient::pinOptions($this->options['pinned_public_key'] ?? null));
     }
 
     /** @return ResourceCollection<Light> */

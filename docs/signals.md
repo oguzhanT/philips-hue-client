@@ -23,7 +23,7 @@ A lamp without color (white or white-ambiance) gets only `on`, `bri` and `alert`
 
 A sender that restores the previous state saves it as `signal-restore-<light id>.json` next to the config file and deletes it after restoring. A signal that starts while such a file exists (and is less than ten minutes old) keeps the saved state instead of capturing the first signal's colors, so overlapping signals still end on the lamp's real state.
 
-Known limit: a sender that does not restore (claude-hue-notify today) does not know about these files. If it changes a lamp while another sender is waiting to restore, the restore wins and its change is undone.
+Every sender that changes a lamp without restoring it (claude-hue-notify, its MCP server, HueBar) deletes that lamp's `signal-restore-<light id>.json` after the change. Its state is newer, so a pending restore must not undo it.
 
 ## Configuration file
 
@@ -39,7 +39,7 @@ Known limit: a sender that does not restore (claude-hue-notify today) does not k
 ```
 
 - `light_ids` are the notifier's lamps. When it is missing or empty, `light_id` is the only lamp. Writers keep `light_id` equal to the first entry for older readers.
-- The file holds the bridge token: create it readable by its owner only (0600).
+- The file holds the bridge token: create it readable by its owner only (0600), and keep it so when rewriting it.
 
 ## Pause file
 
