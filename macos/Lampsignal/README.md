@@ -6,6 +6,8 @@ macOS menu bar app for Philips Hue: turn lights and rooms on/off, change brightn
 
 Requires macOS 13+ and Swift 5.9+.
 
+**Coming from HueBar?** `./build-app.sh --install` removes `/Applications/HueBar.app` too. The app has a new identity, so macOS asks for local network access again and the "Launch at login" choice has to be made again; the bridge, lamps and pause state live in the shared config and carry over.
+
 ```bash
 ./build-app.sh            # builds build/Lampsignal.app
 ./build-app.sh --install  # also copies it to /Applications and launches it

@@ -39,6 +39,19 @@ class HueServerCommand extends Command
             // Set environment variables
             putenv("HUE_BRIDGE_IP={$hueClient->getBridgeIp()}");
             putenv("HUE_USERNAME={$hueClient->getUsername()}");
+            // Laravel reads .env without putenv(), so hand the REST settings
+            // to the server process explicitly; without HUE_API_KEY it refuses
+            // every request.
+            foreach (
+                ['HUE_API_KEY', 'HUE_API_INSECURE', 'HUE_CORS_ORIGINS', 'HUE_DEBUG',
+                 'HUE_GITHUB_WEBHOOK_SECRET', 'HUE_SENTRY_WEBHOOK_SECRET', 'HUE_WEBHOOK_LIGHTS',
+                 'HUE_GITHUB_BRANCHES', 'HUE_WEBHOOK_STATE_DIR'] as $name
+            ) {
+                $value = env($name);
+                if ($value !== null && $value !== '') {
+                    putenv($name . '=' . (is_bool($value) ? ($value ? '1' : '0') : $value));
+                }
+            }
 
             // Start built-in PHP server
             // The package's own public/ (the vendor path changed with the package name).

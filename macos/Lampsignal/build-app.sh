@@ -16,6 +16,9 @@ echo "Built $APP"
 if [[ "${1:-}" == "--install" ]]; then
     pkill -x Lampsignal 2>/dev/null || true
     rm -rf /Applications/Lampsignal.app
+    # The app was called HueBar before 3.0: remove it so two menu bar apps don't run.
+    pkill -x HueBar 2>/dev/null || true
+    rm -rf /Applications/HueBar.app
     cp -R "$APP" /Applications/
     open /Applications/Lampsignal.app
     echo "Installed to /Applications/Lampsignal.app"
