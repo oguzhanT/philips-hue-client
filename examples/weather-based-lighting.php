@@ -918,8 +918,8 @@ function processSensorData($sensorData) {
     }
 }
 
-// Cron job for regular updates
-// */5 * * * * php /path/to/weather-sync.php
+// Cron job for regular updates, every 5 minutes:
+// php /path/to/weather-sync.php
 
 // WebSocket real-time weather updates
 $loop = React\EventLoop\Factory::create();
