@@ -62,7 +62,7 @@ class WebhookTest extends TestCase
 
     public function testSignedGithubDeliveryLightsTheLampsWithoutAnApiKey(): void
     {
-        $body = (string) json_encode(['action' => 'completed', 'workflow_run' => ['conclusion' => 'failure', 'head_branch' => 'main']]);
+        $body = (string) json_encode(['action' => 'completed', 'workflow_run' => ['conclusion' => 'failure', 'head_branch' => 'main', 'id' => 1]]);
         $response = $this->post('/hooks/github', $body, [
             'X-GitHub-Event' => 'workflow_run',
             'X-Hub-Signature-256' => 'sha256=' . hash_hmac('sha256', $body, 'gh-secret'),
@@ -74,7 +74,7 @@ class WebhookTest extends TestCase
 
     public function testAReplayedDeliveryIsIgnored(): void
     {
-        $body = (string) json_encode(['action' => 'completed', 'workflow_run' => ['conclusion' => 'failure', 'head_branch' => 'main']]);
+        $body = (string) json_encode(['action' => 'completed', 'workflow_run' => ['conclusion' => 'failure', 'head_branch' => 'main', 'id' => 2]]);
         $headers = [
             'X-GitHub-Event' => 'workflow_run',
             'X-GitHub-Delivery' => 'delivery-' . bin2hex(random_bytes(4)),
@@ -87,17 +87,21 @@ class WebhookTest extends TestCase
         $this->assertSame(200, $second->getStatusCode());
         $this->assertStringContainsString('Duplicate', (string) $second->getBody());
         $this->assertCount(1, $this->sent, 'the lamp changed once');
+
+        // The delivery header is not signed: dropping or changing it must not help.
+        $this->post('/hooks/github', $body, ['X-GitHub-Delivery' => 'made-up'] + $headers);
+        unset($headers['X-GitHub-Delivery']);
+        $this->post('/hooks/github', $body, $headers);
+        $this->assertCount(1, $this->sent, 'still once');
     }
 
     public function testUnsignedDeliveriesAreNotRecorded(): void
     {
-        $id = 'delivery-' . bin2hex(random_bytes(4));
-        $this->post('/hooks/github', '{}', ['X-GitHub-Event' => 'ping', 'X-GitHub-Delivery' => $id, 'X-Hub-Signature-256' => 'sha256=00']);
+        $body = '{"zen":"' . bin2hex(random_bytes(4)) . '"}';
+        $this->post('/hooks/github', $body, ['X-GitHub-Event' => 'ping', 'X-Hub-Signature-256' => 'sha256=00']);
 
-        $body = '{}';
         $response = $this->post('/hooks/github', $body, [
             'X-GitHub-Event' => 'ping',
-            'X-GitHub-Delivery' => $id,
             'X-Hub-Signature-256' => 'sha256=' . hash_hmac('sha256', $body, 'gh-secret'),
         ]);
 

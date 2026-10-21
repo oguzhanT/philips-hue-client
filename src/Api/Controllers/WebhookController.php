@@ -40,7 +40,12 @@ class WebhookController extends BaseController
             return $this->errorResponse($response, 'Invalid signature.', 401);
         }
 
-        if ($this->isReplay('github', $request->getHeaderLine('X-GitHub-Delivery'))) {
+        try {
+            $replay = $this->isReplay('github', $body);
+        } catch (\RuntimeException $e) {
+            return $this->errorResponse($response, $e->getMessage(), 503);
+        }
+        if ($replay) {
             return $this->successResponse($response, ['signal' => null], 'Duplicate delivery ignored');
         }
 
@@ -66,7 +71,12 @@ class WebhookController extends BaseController
             return $this->errorResponse($response, 'Invalid signature.', 401);
         }
 
-        if ($this->isReplay('sentry', $request->getHeaderLine('Request-ID'))) {
+        try {
+            $replay = $this->isReplay('sentry', $body);
+        } catch (\RuntimeException $e) {
+            return $this->errorResponse($response, $e->getMessage(), 503);
+        }
+        if ($replay) {
             return $this->successResponse($response, ['signal' => null], 'Duplicate delivery ignored');
         }
 
@@ -98,12 +108,12 @@ class WebhookController extends BaseController
     }
 
     /**
-     * Called only after the signature checked out. Answered with 200 so the
-     * sender does not retry it.
+     * Called only after the signature checked out, with the body it covers.
+     * A replay is answered with 200 so the sender does not retry it.
      */
-    private function isReplay(string $source, string $deliveryId): bool
+    private function isReplay(string $source, string $signedBody): bool
     {
-        return $deliveryId !== '' && $this->deliveries->seenBefore($source, $deliveryId);
+        return $this->deliveries->seenBefore($source, $signedBody);
     }
 
     private function decode(string $body): array
