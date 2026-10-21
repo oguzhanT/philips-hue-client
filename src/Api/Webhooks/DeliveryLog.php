@@ -14,15 +14,14 @@ namespace OguzhanTogay\HueClient\Api\Webhooks;
  */
 final class DeliveryLog
 {
+    private string $directory;
     private string $path;
 
     public function __construct(?string $directory = null, private readonly int $ttl = 86400)
     {
-        $directory ??= self::defaultDirectory();
-        if (!is_dir($directory) && !@mkdir($directory, 0700, true) && !is_dir($directory)) {
-            throw new \RuntimeException("Cannot create the webhook state directory {$directory}.");
-        }
-        $this->path = rtrim($directory, '/') . '/hue-webhook-deliveries.json';
+        // Nothing touches the disk until a webhook arrives.
+        $this->directory = rtrim($directory ?? self::defaultDirectory(), '/');
+        $this->path = $this->directory . '/hue-webhook-deliveries.json';
     }
 
     /**
@@ -35,6 +34,7 @@ final class DeliveryLog
     public function seenBefore(string $source, string $signedBody): bool
     {
         $key = $source . ':' . hash('sha256', $signedBody);
+        $this->prepareDirectory();
 
         if (is_link($this->path)) {
             throw new \RuntimeException("{$this->path} is a symlink; refusing to use it.");
@@ -68,6 +68,33 @@ final class DeliveryLog
         } finally {
             flock($handle, LOCK_UN);
             fclose($handle);
+        }
+    }
+
+    /**
+     * Creates the directory owner-only, and refuses one that is a symlink,
+     * belongs to someone else or is open to others (a name under a shared
+     * temp dir can be claimed in advance).
+     */
+    private function prepareDirectory(): void
+    {
+        $directory = $this->directory;
+        if (!is_dir($directory) && !@mkdir($directory, 0700, true) && !is_dir($directory)) {
+            throw new \RuntimeException("Cannot create the webhook state directory {$directory}.");
+        }
+
+        if (is_link($directory)) {
+            throw new \RuntimeException("{$directory} is a symlink; refusing to use it.");
+        }
+
+        clearstatcache(true, $directory);
+        $owner = @fileowner($directory);
+        $mode = @fileperms($directory);
+        $me = function_exists('posix_geteuid') ? posix_geteuid() : $owner;
+        if ($owner !== $me || $mode === false || ($mode & 0077) !== 0) {
+            throw new \RuntimeException(
+                "{$directory} must belong to this user and be closed to others (0700); refusing to use it."
+            );
         }
     }
 

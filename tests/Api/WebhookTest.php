@@ -108,6 +108,25 @@ class WebhookTest extends TestCase
         $this->assertStringContainsString('pong', (string) $response->getBody());
     }
 
+    public function testAStateDirectoryOpenToOthersIsRefused(): void
+    {
+        $dir = sys_get_temp_dir() . '/hue-webhook-open-' . bin2hex(random_bytes(4));
+        mkdir($dir, 0777);
+        chmod($dir, 0777);
+
+        try {
+            $body = '{"zen":"x"}';
+            $response = $this->post('/hooks/github', $body, [
+                'X-GitHub-Event' => 'ping',
+                'X-Hub-Signature-256' => 'sha256=' . hash_hmac('sha256', $body, 'gh-secret'),
+            ], ['github_secret' => 'gh-secret', 'state_dir' => $dir]);
+
+            $this->assertSame(503, $response->getStatusCode());
+        } finally {
+            @rmdir($dir);
+        }
+    }
+
     public function testRejectsABadSignature(): void
     {
         $response = $this->post('/hooks/github', '{"action":"completed"}', [
@@ -151,7 +170,7 @@ class WebhookTest extends TestCase
     {
         if ($this->stateDir === null) {
             $this->stateDir = sys_get_temp_dir() . '/hue-webhook-test-' . bin2hex(random_bytes(4));
-            mkdir($this->stateDir);
+            mkdir($this->stateDir, 0700);
         }
         return $this->stateDir;
     }
@@ -169,7 +188,7 @@ class WebhookTest extends TestCase
         $api = new RestApi($client, [
             'api_key' => 'key',
             'webhooks' => ($webhooks ?? ['github_secret' => 'gh-secret', 'sentry_secret' => 'sentry-secret', 'lights' => ['Desk']])
-                + ['state_dir' => $this->stateDir()],
+                + ['state_dir' => $webhooks['state_dir'] ?? $this->stateDir()],
         ]);
 
         $request = new Request(
