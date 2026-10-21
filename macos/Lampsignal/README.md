@@ -1,13 +1,13 @@
-# HueBar
+# Lampsignal for Mac
 
-macOS menu bar app for Philips Hue: turn lights and rooms on/off, change brightness and color, and control the [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) notifier (pause/resume it and choose its lamp).
+macOS menu bar app for Philips Hue: turn lights and rooms on/off, change brightness and color, and control the [Lampsignal plugin](https://github.com/oguzhanT/lampsignal)'s notifier (pause/resume it and choose its lamp).
 
-<img src="docs/huebar.png" alt="HueBar menu: notifier switch, lamp picker, pause and test buttons, light controls" width="356">
+<img src="docs/menu-bar.png" alt="Lampsignal menu: notifier switch, lamp picker, pause and test buttons, light controls" width="356">
 
 Requires macOS 13+ and Swift 5.9+.
 
 ```bash
-./build-app.sh            # builds build/HueBar.app
+./build-app.sh            # builds build/Lampsignal.app
 ./build-app.sh --install  # also copies it to /Applications and launches it
 ```
 

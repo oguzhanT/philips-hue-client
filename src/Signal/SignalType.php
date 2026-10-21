@@ -3,7 +3,7 @@
 namespace OguzhanTogay\HueClient\Signal;
 
 /**
- * The developer-notification states shared with claude-hue-notify and HueBar
+ * The developer-notification states shared with the Lampsignal plugin and Lampsignal for Mac
  * (see docs/signals.md): same names, colors and blink behaviour everywhere.
  */
 enum SignalType: string
@@ -22,7 +22,7 @@ enum SignalType: string
     case Off = 'off';
 
     /**
-     * Accepts the names claude-hue-notify uses too (waiting, done).
+     * Accepts the names the Lampsignal plugin uses too (waiting, done).
      */
     public static function fromName(string $name): self
     {

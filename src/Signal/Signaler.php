@@ -13,7 +13,7 @@ use OguzhanTogay\HueClient\Resources\Light;
  *   $client->signal()->send('error', ['Desk', 3]);      // by name or id
  *   $client->signal()->send('attention', 'Desk', restoreAfter: 10);
  *
- * It honours the pause file that claude-hue-notify and HueBar use, and can
+ * It honours the pause file that the Lampsignal plugin and Lampsignal for Mac use, and can
  * put the lamps back the way they were afterwards.
  */
 class Signaler
@@ -31,7 +31,7 @@ class Signaler
 
     /**
      * @param HueClient|null $client             null is enough for pause(), resume() and isPaused()
-     * @param string|null    $notifierConfigPath claude-hue-notify's config.json; its directory
+     * @param string|null    $notifierConfigPath the Lampsignal plugin's config.json; its directory
      *                                           also holds the pause file
      */
     public function __construct(private readonly ?HueClient $client, ?string $notifierConfigPath = null)
@@ -39,7 +39,7 @@ class Signaler
         $path = $notifierConfigPath
             ?? (getenv('HUE_NOTIFY_CONFIG') ?: '~/.config/hue-notify/config.json');
 
-        // Same as Python's expanduser in claude-hue-notify.
+        // Same as Python's expanduser in the Lampsignal plugin.
         $this->notifierConfigPath = str_starts_with($path, '~/') ? self::home() . substr($path, 1) : $path;
     }
 
@@ -49,7 +49,7 @@ class Signaler
      * reported together at the end.
      *
      * @param SignalType|string           $type         attention, success, error, warning, working, off
-     *                                                  (or claude-hue-notify's waiting, done)
+     *                                                  (or the Lampsignal plugin's waiting, done)
      * @param int|string|Light|array|null $lights       light ids, names or objects; null means the notifier's lamps
      * @param int|null                    $restoreAfter seconds before restoring the previous state; it blocks,
      *                                                  so keep it under your queue worker's timeout
@@ -265,7 +265,7 @@ class Signaler
     }
 
     /**
-     * The lamps claude-hue-notify drives: light_ids, else light_id.
+     * The lamps the Lampsignal plugin drives: light_ids, else light_id.
      *
      * @return string[]
      */

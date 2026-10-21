@@ -41,10 +41,16 @@ class HueServerCommand extends Command
             putenv("HUE_USERNAME={$hueClient->getUsername()}");
 
             // Start built-in PHP server
-            $publicPath = base_path('vendor/oguzhant/philips-hue-client/public');
+            // The package's own public/ (the vendor path changed with the package name).
+            $publicPath = dirname(__DIR__, 3) . '/public';
             $router = $publicPath . '/api.php';
 
-            $command = "php -S {$host}:{$port} -t {$publicPath} {$router}";
+            $command = sprintf(
+                'php -S %s -t %s %s',
+                escapeshellarg("{$host}:{$port}"),
+                escapeshellarg($publicPath),
+                escapeshellarg($router)
+            );
             passthru($command);
 
             return self::SUCCESS;

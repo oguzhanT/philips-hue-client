@@ -30,7 +30,7 @@ class HueCommand extends Command
     public function __construct()
     {
         parent::__construct('hue:command');
-        // The config shared with claude-hue-notify and HueBar (docs/signals.md).
+        // The config shared with the Lampsignal plugin and Lampsignal for Mac (docs/signals.md).
         $home = getenv('HOME') ?: ($_SERVER['HOME'] ?? '');
         $shared = getenv('HUE_NOTIFY_CONFIG') ?: '~/.config/hue-notify/config.json';
         $this->configFile = str_starts_with($shared, '~/') ? $home . substr($shared, 1) : $shared;
@@ -805,7 +805,7 @@ class HueCommand extends Command
         $output->writeln("  signal [type]            - attention, success, error, warning, working, off");
         $output->writeln("  events                   - Watch changes live (--duration to stop after N seconds)");
         $output->writeln("  pin                      - Pin the bridge's certificate (done by setup since 2.1)");
-        $output->writeln("  pause [minutes]          - Pause signals (also pauses claude-hue-notify)");
+        $output->writeln("  pause [minutes]          - Pause signals (also pauses the Lampsignal plugin)");
         $output->writeln("  resume                   - Resume signals");
         $output->writeln("  server                   - Start REST API server");
         $output->writeln("");
