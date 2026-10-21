@@ -7,6 +7,9 @@ use OguzhanTogay\HueClient\Discovery\BridgeDiscovery;
 
 /**
  * 🌤️ Weather-Based Ambient Lighting System
+ *
+ * Requires ReactPHP, which the library itself no longer pulls in:
+ *   composer require react/event-loop react/socket
  * 
  * This example creates dynamic lighting that responds to real weather conditions,
  * forecasts, and seasonal changes to bring the outdoors inside.
@@ -915,8 +918,8 @@ function processSensorData($sensorData) {
     }
 }
 
-// Cron job for regular updates
-// */5 * * * * php /path/to/weather-sync.php
+// Cron job for regular updates, every 5 minutes:
+// php /path/to/weather-sync.php
 
 // WebSocket real-time weather updates
 $loop = React\EventLoop\Factory::create();

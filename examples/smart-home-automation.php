@@ -865,7 +865,7 @@ class SmartHomeAutomation
                 'default_brightness' => 75,
                 'evening_start' => 17,
             ],
-        ];
+        };
         
         // Apply seasonal defaults
         foreach ($this->rooms as $roomName => $room) {
@@ -1728,8 +1728,8 @@ $hueSensor->onStateChange(function($state) use ($smartHome) {
 });
 
 // Time-based Automation Cron Jobs
-// */5 * * * * php /path/to/smart-home-check.php         # Every 5 minutes
+// 0-59/5 * * * * php /path/to/smart-home-check.php         # Every 5 minutes
 // 0 7 * * 1-5 php /path/to/weekday-morning.php         # Weekday mornings
 // 0 22 * * * php /path/to/bedtime-routine.php          # Every night at 10 PM
-// 0 */4 * * * php /path/to/energy-optimization.php     # Energy check every 4 hours
+// 0 0-23/4 * * * php /path/to/energy-optimization.php     # Energy check every 4 hours
 */

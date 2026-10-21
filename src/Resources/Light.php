@@ -122,6 +122,17 @@ class Light
         return $this->setState(['effect' => $effect]);
     }
 
+    public function setName(string $name): self
+    {
+        $this->client->request('PUT', "lights/{$this->id}", [
+            'json' => ['name' => $name]
+        ]);
+
+        $this->attributes['name'] = $name;
+
+        return $this;
+    }
+
     public function setState(array $state): self
     {
         $this->client->request('PUT', "lights/{$this->id}/state", [

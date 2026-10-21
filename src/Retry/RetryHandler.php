@@ -77,46 +77,6 @@ class RetryHandler
         throw $lastException ?? new \Exception('Operation failed');
     }
 
-    public function executeAsync(callable $operation, string $operationName = 'async_operation'): \Generator
-    {
-        for ($attempt = 0; $attempt <= $this->maxRetries; $attempt++) {
-            try {
-                $result = yield $operation();
-
-                if ($attempt > 0) {
-                    $this->logger->info("Async operation succeeded after retry", [
-                        'operation' => $operationName,
-                        'attempt' => $attempt + 1
-                    ]);
-                }
-
-                return $result;
-            } catch (\Exception $exception) {
-                if ($attempt >= $this->maxRetries || !$this->shouldRetry($exception)) {
-                    $this->logger->error("Async operation failed after all retries", [
-                        'operation' => $operationName,
-                        'total_attempts' => $attempt + 1,
-                        'error' => $exception->getMessage()
-                    ]);
-                    throw $exception;
-                }
-
-                $delay = $this->retryDelays[$attempt] ?? end($this->retryDelays);
-
-                $this->logger->warning("Async operation failed, retrying", [
-                    'operation' => $operationName,
-                    'attempt' => $attempt + 1,
-                    'delay' => $delay,
-                    'error' => $exception->getMessage()
-                ]);
-
-                yield new \React\Promise\Promise(function ($resolve) use ($delay) {
-                    \React\EventLoop\Loop::get()->addTimer($delay, $resolve);
-                });
-            }
-        }
-    }
-
     private function shouldRetry(\Exception $exception): bool
     {
         foreach ($this->retryableExceptions as $retryableClass) {

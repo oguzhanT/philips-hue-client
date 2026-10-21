@@ -271,7 +271,7 @@ class GamingMoodLighting
             'boss_fight' => $this->onBossFight($data['boss_name'] ?? 'Boss'),
             'loot_found' => $this->onLootFound($data['rarity'] ?? 'common'),
             default => $this->handleUnknownEvent($eventType)
-        }
+        };
     }
 
     private function onKill(array $data): void

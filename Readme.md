@@ -12,34 +12,29 @@
 [![Latest Stable Version](https://poser.pugx.org/oguzhantogay/philips-hue-client/v/stable?format=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
 [![Composer Dependencies](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen?style=flat-square)](https://packagist.org/packages/oguzhantogay/philips-hue-client)
 
-A modern, fully-featured PHP client for Philips Hue smart lights. Control lights, rooms, scenes, and schedules with an elegant API. Framework-agnostic with built-in support for Laravel, Symfony, and standalone PHP applications.
+A PHP client for Philips Hue smart lights. Control lights, rooms, scenes, and schedules with a fluent API, from plain PHP, Laravel, or Symfony, or from the command line.
+
+> It talks to the bridge's **v1 (classic) API**. CLIP v2 support is planned; see [Known limitations and roadmap](#-known-limitations-and-roadmap).
 
 ## ✨ Features
 
-- 🎨 **Complete Hue API v2 Support** - Lights, groups, scenes, schedules, sensors
-- 🔍 **Auto Bridge Discovery** - Automatic bridge detection using mDNS/N-UPnP
-- 💡 **Intuitive API** - Fluent interface for natural command chaining
-- 🎬 **Scene Management** - Create, modify, and activate scenes
-- 🎭 **Built-in Effects** - Color loops, breathing, alerts, and custom animations
-- ⚡ **Event Streaming** - Real-time updates via Server-Sent Events (SSE)
-- 🛠️ **CLI Tool** - Command-line interface for quick control
-- 🌐 **REST API Server** - Full REST API with Swagger documentation
-- 📦 **Framework Integration** - Ready-made adapters for popular frameworks
-- 🧪 **Fully Tested** - Comprehensive test coverage with mocked responses
-- 📊 **Resource Monitoring** - Track energy usage and light statistics
-- 🔒 **Secure** - Supports Hue's enhanced security mode
-- 🚀 **Performance** - Connection pooling, caching, and retry mechanisms
-- 🐳 **Docker Ready** - Container support for easy deployment
-- 🔄 **Rate Limiting** - Prevents API abuse and protects bridge
-- 💾 **Smart Caching** - Automatic caching with configurable TTL
+- 💡 **Lights, groups, scenes, schedules, sensors** - Hue v1 API, with a fluent interface for chaining
+- 🔍 **Bridge discovery** - Finds bridges through Philips' N-UPnP discovery service (internet required)
+- 🎭 **Effects** - Color loop, breathing, alert flashes, and frame animations
+- 🛠️ **CLI tool** - `hue` for quick control from the terminal
+- 🌐 **REST API server** - HTTP endpoints over the client, for trusted local networks
+- 📦 **Framework integration** - Laravel service provider, facade and commands; Symfony bundle
+- 🔁 **Retries and connection pooling** - Retries transient failures; manages several bridges
+- 💾 **Optional caching and rate limiting** - Turn on by installing `symfony/cache` and `symfony/rate-limiter`
+- 🐳 **Docker** - Development setup with Docker Compose
+- 🍎 **macOS menu bar app** - [HueBar](#-macos-menu-bar-app)
 
 ## 📋 Requirements
 
-- PHP 8.0 or higher
-- Philips Hue Bridge (v2 or newer)
-- Network access to Hue Bridge
+- PHP 8.2 or higher
+- Philips Hue Bridge (the square v2 bridge)
+- Network access to the bridge
 - ext-json
-- ext-curl (optional, for better performance)
 
 ## 🚀 Installation
 
@@ -142,13 +137,14 @@ foreach ($scenes as $scene) {
 // Activate scene
 $client->scenes()->activate('Sunset');
 
-// Create custom scene
+// Create custom scene. Light states use the bridge's own fields:
+// bri 1-254, hue 0-65535, sat 0-254, ct in mireds (153-500).
 $scene = $client->scenes()->create(
     name: 'Movie Time',
     lights: [
-        1 => ['on' => true, 'brightness' => 30, 'color' => '#0000FF'],
+        1 => ['on' => true, 'bri' => 76, 'hue' => 46920, 'sat' => 254],  // dim blue
         2 => ['on' => false],
-        3 => ['on' => true, 'brightness' => 20, 'color' => '#FF0000']
+        3 => ['on' => true, 'bri' => 50, 'hue' => 0, 'sat' => 254],      // dim red
     ]
 );
 ```
@@ -182,43 +178,30 @@ $light->animate([
 
 ### Schedules
 
+Schedules run on the bridge, so a command is the bridge request to make at that time:
+`address` (the API path, including your username), `method`, and `body`.
+
 ```php
-// Create schedule
-$schedule = $client->schedules()->create(
+$bedroom = $client->groups()->getByName('Bedroom');
+$command = [
+    'address' => "/api/{$client->getUsername()}/groups/{$bedroom->getId()}/action",
+    'method'  => 'PUT',
+    'body'    => ['on' => true, 'bri' => 254, 'ct' => 250, 'transitiontime' => 9000], // 15-minute fade
+];
+
+// Weekdays at 07:00
+$client->schedules()->create(
     name: 'Morning Wake Up',
-    command: $client->groups()->getByName('Bedroom')->sunrise(duration: 900),
+    command: $command,
     time: '07:00:00',
     repeat: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
 );
 
-// One-time schedule
-$client->schedules()->once(
-    name: 'Party Lights',
-    command: $client->groups()->all()->party(),
-    dateTime: '2024-12-31 23:00:00'
-);
+// Once
+$client->schedules()->once('New Year', $command, '2026-12-31 23:00:00');
 
-// Sunset/sunrise schedules
-$client->schedules()->atSunset(
-    command: $client->groups()->getByName('Garden')->on()
-);
-```
-
-### Real-time Events (SSE)
-
-```php
-// Listen for light state changes
-$client->events()->listen(function($event) {
-    if ($event->getType() === 'light.state_changed') {
-        echo "Light {$event->getLightId()} changed\n";
-        echo "New state: " . json_encode($event->getData()) . "\n";
-    }
-});
-
-// Subscribe to specific events
-$client->events()->subscribe('motion.detected', function($event) {
-    $client->groups()->getByName('Hallway')->on();
-});
+// At sunset (needs the daylight sensor configured on the bridge)
+$client->schedules()->atSunset($command);
 ```
 
 ## 🛠️ CLI Usage
@@ -235,41 +218,37 @@ hue discover
 # Setup/authenticate
 hue setup
 
-# Light control
-hue lights                    # List all lights
-hue on "Living Room"         # Turn on light
-hue off --all               # Turn off all lights
-hue brightness 75 "Kitchen"  # Set brightness
-hue color "#FF5733" --all   # Set color for all
+# Lights, rooms, sensors, schedules
+hue lights                       # List all lights
+hue rooms                        # List rooms and groups
+hue status                       # Bridge status
+hue on "Living Room"             # Turn on a light or group
+hue off --all                    # Turn off all lights
+hue toggle --room="Kitchen"      # Toggle a room
+hue brightness "Kitchen" -b 75   # Set brightness (0-100)
+hue color --all -c "#FF5733"     # Set color for all
 
 # Scenes
-hue scenes                   # List scenes
-hue scene activate "Relax"   # Activate scene
+hue scenes                       # List scenes
+hue scene activate               # Asks for the scene name
 
-# Effects
+# Effects (they run in the foreground for --duration seconds)
 hue effect party --duration=30
+hue effect breathing --room="Bedroom" --duration=60
 hue effect sunrise --room="Bedroom" --duration=600
-
-# Interactive mode
-hue interactive              # Enter interactive shell
-hue server                   # Start REST API server
 ```
 
 ## 🌐 REST API Server
 
-The package includes a full REST API server with Swagger documentation:
+The package includes a REST API over the client.
+
+> ⚠️ **Run it only on a trusted network.** It has no authentication yet and allows cross-origin requests, so anything that can reach the port, including web pages open in a browser on the same network, can control and delete lights, groups, scenes and schedules. Authentication is on the [roadmap](#-known-limitations-and-roadmap).
 
 ### Quick Start
 
 ```bash
-# Start the API server
-./bin/hue-server --discover
-
-# Or with specific bridge
-./bin/hue-server -h 192.168.1.100 -u your-username
-
-# Or using Composer
-composer serve
+# Using Composer's built-in server
+HUE_BRIDGE_IP=192.168.1.100 HUE_USERNAME=your-username composer serve
 
 # Or using Docker
 docker-compose up
@@ -328,12 +307,12 @@ The API will be available at:
 # Get all lights
 curl http://localhost:8080/api/lights
 
-# Turn on a light
+# Turn on a light (PUT takes bridge units: brightness 0-254, hue 0-65535, saturation 0-254)
 curl -X PUT http://localhost:8080/api/lights/1/state \
   -H "Content-Type: application/json" \
-  -d '{"on": true, "brightness": 75}'
+  -d '{"on": true, "brightness": 190}'
 
-# Set light color
+# Set light color (PATCH takes brightness 0-100, color as hex, temperature in Kelvin)
 curl -X PATCH http://localhost:8080/api/lights/1/state \
   -H "Content-Type: application/json" \
   -d '{"color": "#FF5733"}'
@@ -704,6 +683,25 @@ $hue = new \OguzhanTogay\HueClient\HueClient(
 
 <img src="macos/HueBar/docs/huebar.png" alt="HueBar menu bar app" width="356">
 
+## 🚧 Known limitations and roadmap
+
+What the library does not do yet, so you are not surprised:
+
+- **Hue API v1 only.** Gradient lights, the bridge's own effects (candle, fire, sparkle), dynamic scenes and entertainment areas need CLIP v2.
+- **No real-time events.** `$client->events()` is a placeholder; there is no event stream yet.
+- **Discovery needs the internet.** Only Philips' N-UPnP service is used; local mDNS discovery is not implemented.
+- **REST server has no authentication** and should stay on a trusted network.
+- **Effects block** the PHP process while they run.
+- **Caching and rate limiting** are off unless `symfony/cache` and `symfony/rate-limiter` are installed.
+
+Planned, roughly in this order:
+
+1. REST API authentication, closed CORS, no secrets in error messages
+2. A `signal` API (`$hue->signal('success')`, `hue signal error`) for developer notifications, and a Laravel notification channel
+3. CLIP v2 with event stream and mDNS discovery (2.0)
+
+See [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
+
 ## 🐳 Docker Development
 
 ### Quick Start with Docker
@@ -778,6 +776,9 @@ $results = $pool->broadcastToAll(function($client) {
 ```
 
 ### Caching & Retry
+
+Caching needs `symfony/cache` (and `ext-redis` for the Redis adapter): `composer require symfony/cache`.
+
 ```php
 $client = new HueClient($bridgeIp, $username, [
     'cache_enabled' => true,
@@ -791,7 +792,7 @@ $lights = $client->lights()->getAll(); // Cached for 10 seconds
 ```
 
 ### Rate Limiting
-The REST API automatically rate limits requests to protect your bridge:
+With `symfony/rate-limiter` installed, the REST API rate limits requests to protect your bridge:
 - **Limit**: 100 requests per minute per IP
 - **Headers**: `X-RateLimit-Limit`, `X-RateLimit-Remaining`
 - **Error**: HTTP 429 when exceeded
@@ -821,13 +822,12 @@ Check the `/examples` directory for complete examples:
 
 ## 🌟 Community Showcase
 
-**Built something awesome?** Share it with us!
+| Project | Description |
+|---------|-------------|
+| [claude-hue-notify](https://github.com/oguzhanT/claude-hue-notify) | Claude Code plugin: your desk lamp turns blue when Claude needs you, green when it is done |
+| [HueBar](macos/HueBar) | macOS menu bar app for lights, rooms and the notifier |
 
-| Project | Description | Author |
-|---------|-------------|---------|
-| [Hue DJ Controller](link) | Sync lights with DJ mixer | @username |
-| [Smart Office Bot](link) | Slack bot for office lighting | @username |
-| [Gaming Immersion](link) | React to game events | @username |
+**Built something with it?** Share it:
 
 [➕ Add your project](https://github.com/oguzhanT/philips-hue-client/discussions/new?category=show-and-tell)
 
